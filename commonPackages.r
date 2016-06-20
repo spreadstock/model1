@@ -58,3 +58,27 @@ loadMultipleStock <- function(stock.folder, stock.name.list, operation.name = "C
   } 
   return (entStocks)
 }
+
+calcuateLogReturn <- function(x)
+{
+  dx <- na.omit(x)
+  dx<-diff(log(x), trim=TRUE)
+  dx <- na.omit(dx)
+  #dx <- dx[is.finite(dx)]
+  return (dx)
+}
+
+calcuateSimpleReturn <- function(x)
+{
+  dx <- na.omit(x)
+  dx<-diff(x) / x[-length(x)]
+  dx <- na.omit(dx)
+  return (dx)
+}
+
+calcuateSMA <- function(x, n)
+{
+  dx <- na.locf(x, na.rm = TRUE)
+  dx<-SMA(dx,n)
+  return (dx)
+}
