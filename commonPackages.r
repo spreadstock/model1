@@ -1,3 +1,8 @@
+library(quantmod)
+library(plyr)
+library(ggplot2)
+library(scales)
+
 #loadStock loads single stock
 #Example, 
 #stock.folder <- 'C:/important/ideas/stock/stockdata/'
@@ -82,3 +87,51 @@ calcuateSMA <- function(x, n)
   dx<-SMA(dx,n)
   return (dx)
 }
+
+#calcuate time weighted correlation
+#x, multiple stocks on time serials. x must contain more than one stocks
+#timeWeighted, weighted value. Weight reduced as timeWeighted^n, where n is number of days
+timeweighted_corr <- function(x, timeWeighted=1)
+{
+  numberOfDays <- nrow (x) - 1
+  lam = timeWeighted
+  i = 0:numberOfDays
+  ewma.wt = lam^i
+  ewma.wt = ewma.wt/sum(ewma.wt)
+  cov.ewma = cov.wt(x, wt=rev(ewma.wt), cor=TRUE)
+  cov.ewma
+  
+}
+
+#subset of stock data by date range
+#x, multiple stocks on time serials. x must contain at least one stocks data
+#start_date, start of range. when not presented, the first date will be used
+#end_date, end of range. when not presented, the last date will be used
+subsetByDateRange <- function(x, start_date=start(x), end_date=end(x))
+{
+  range <- paste(start_date, "::", end_date, sep = "")
+  return(x[range,])
+  
+}
+
+#draw stock data
+#ldata, stock matrix on time serials. The first column is the main data.
+#title, subject of drawing
+#ylab, subject of Y axis
+#sDate, start date
+#eDate, end date
+#major breaks, the major breaks on X axis
+#minor breaks, the minor breaks on X axis
+#out, if save to output file. 
+drawLine<-function(ldata,title="Stock_MA",ylab="Value",sDate=min(index(ldata)),eDate=max(index(ldata)),majorBreaks="2 month", minorBreaks="1 week", out=FALSE){
+  g<-ggplot(aes(x=Index, y=Value),data=fortify(ldata[,1],melt=TRUE))
+  g<-g+geom_line()
+  g<-g+geom_line(aes(colour=Series),data=fortify(ldata[,-1],melt=TRUE))
+  g<-g+scale_x_date(labels=date_format("%d/%m%y"),breaks=date_breaks(majorBreaks),minor_breaks=date_breaks(minorBreaks), limits = c(sDate,eDate))
+  g<-g+xlab("") + ylab(ylab)+ggtitle(title)
+  
+  if(out) ggsave(g,file=paste(titie,".png",sep=""))
+  return (g)
+}
+
+
