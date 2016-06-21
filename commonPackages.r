@@ -3,7 +3,7 @@ library(plyr)
 library(ggplot2)
 library(scales)
 
-#loadStock loads single stock
+#loadStock loads single stock a
 #Example, 
 #stock.folder <- 'C:/important/ideas/stock/stockdata/'
 #SH601098<- loadStock(stock.folder, "SH601098","Op")
