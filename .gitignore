@@ -64,3 +64,4 @@ junit_output
 *.pyc
 admin/linux/install/3pp/
 
+.Rproj.user
