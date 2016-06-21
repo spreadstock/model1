@@ -35,6 +35,10 @@ public class FileStock
         return fileName;
     }
 
+    public String getNewFileName()
+    {
+        return fileName.replace("#", "");
+    }
 
     public void setFileName(String fileName)
     {
@@ -50,7 +54,7 @@ public class FileStock
 
     public void setTitle(String tile)
     {
-        this.title = String.format("Date, Open, %s.High, %s.Low %s.Close, %s.Volume, %s.Adjusted, %s.Average\n", tile,
+        this.title = String.format("Date, %s.Open, %s.High, %s.Low %s.Close, %s.Volume, %s.Adjusted, %s.Average\n", tile, tile,
                                    tile, tile, tile, tile, tile);
     }
 

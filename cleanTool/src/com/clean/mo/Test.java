@@ -1,10 +1,7 @@
 package com.clean.mo;
 
 import java.math.BigDecimal;
-import java.text.SimpleDateFormat;
-import java.util.Calendar;
-import java.util.Date;
-import java.util.GregorianCalendar;
+import java.util.ArrayList;
 
 public class Test
 {
@@ -18,6 +15,19 @@ public class Test
 
     public static void main(String[] args)
     {
+        
+        ArrayList<String> test = new ArrayList<String>();
+        test.add("1");
+        test.add("2");
+        test.add("3");
+        test.add("4");
+        test.add("5");
+        test.add("1");
+        for(String tmp : test)
+        {
+            System.out.println(tmp);
+        }
+        
 //        double avg = adjusted.divide(new BigDecimal(volume), 4, BigDecimal.ROUND_HALF_UP).doubleValue();
 //        double diff = new BigDecimal(avg).subtract(new BigDecimal(close)).abs().doubleValue();
 //        System.out.println(avg);

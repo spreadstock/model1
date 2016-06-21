@@ -135,7 +135,7 @@ public class HistoryItems
         }
         catch (Exception e)
         {
-            LogError.getLogger().error("calculateAverage error:"+this.toString(), e);
+            LogError.getLogger().error("calculateAverage error:" + this.toString(), e);
             e.printStackTrace();
         }
     }
@@ -155,8 +155,79 @@ public class HistoryItems
 
     public String toString()
     {
-        return date + "," + new BigDecimal(open).setScale(2,BigDecimal.ROUND_HALF_UP).toString() + "," + new BigDecimal(high).setScale(2,BigDecimal.ROUND_HALF_UP).toString() + "," + new BigDecimal(low).setScale(2,BigDecimal.ROUND_HALF_UP).toString() + "," + new BigDecimal(close).setScale(2,BigDecimal.ROUND_HALF_UP).toString() + "," + volume + "," + new BigDecimal(adjusted).setScale(2,BigDecimal.ROUND_HALF_UP).toString() + "," + average
+        return date + "," + new BigDecimal(open).setScale(2, BigDecimal.ROUND_HALF_UP).toString() + ","
+                        + new BigDecimal(high).setScale(2, BigDecimal.ROUND_HALF_UP).toString() + ","
+                        + new BigDecimal(low).setScale(2, BigDecimal.ROUND_HALF_UP).toString() + ","
+                        + new BigDecimal(close).setScale(2, BigDecimal.ROUND_HALF_UP).toString() + "," + volume + ","
+                        + new BigDecimal(adjusted).setScale(2, BigDecimal.ROUND_HALF_UP).toString() + "," + average
                         + "\n";
+    }
+
+
+    @Override
+    public int hashCode()
+    {
+        final int prime = 31;
+        int result = 1;
+        long temp;
+        temp = Double.doubleToLongBits(adjusted);
+        result = prime * result + (int) (temp ^ (temp >>> 32));
+        temp = Double.doubleToLongBits(average);
+        result = prime * result + (int) (temp ^ (temp >>> 32));
+        temp = Double.doubleToLongBits(close);
+        result = prime * result + (int) (temp ^ (temp >>> 32));
+        result = prime * result + ((date == null) ? 0 : date.hashCode());
+        temp = Double.doubleToLongBits(high);
+        result = prime * result + (int) (temp ^ (temp >>> 32));
+        temp = Double.doubleToLongBits(low);
+        result = prime * result + (int) (temp ^ (temp >>> 32));
+        temp = Double.doubleToLongBits(open);
+        result = prime * result + (int) (temp ^ (temp >>> 32));
+        result = prime * result + ((previousDay == null) ? 0 : previousDay.hashCode());
+        result = prime * result + (int) (volume ^ (volume >>> 32));
+        return result;
+    }
+
+
+    @Override
+    public boolean equals(Object obj)
+    {
+        if (this == obj)
+            return true;
+        if (obj == null)
+            return false;
+        if (getClass() != obj.getClass())
+            return false;
+        HistoryItems other = (HistoryItems) obj;
+        if (Double.doubleToLongBits(adjusted) != Double.doubleToLongBits(other.adjusted))
+            return false;
+        if (Double.doubleToLongBits(average) != Double.doubleToLongBits(other.average))
+            return false;
+        if (Double.doubleToLongBits(close) != Double.doubleToLongBits(other.close))
+            return false;
+        if (date == null)
+        {
+            if (other.date != null)
+                return false;
+        }
+        else if (!date.equals(other.date))
+            return false;
+        if (Double.doubleToLongBits(high) != Double.doubleToLongBits(other.high))
+            return false;
+        if (Double.doubleToLongBits(low) != Double.doubleToLongBits(other.low))
+            return false;
+        if (Double.doubleToLongBits(open) != Double.doubleToLongBits(other.open))
+            return false;
+        if (previousDay == null)
+        {
+            if (other.previousDay != null)
+                return false;
+        }
+        else if (!previousDay.equals(other.previousDay))
+            return false;
+        if (volume != other.volume)
+            return false;
+        return true;
     }
 
 
