@@ -34,7 +34,6 @@ composer.conf
 *.tar
 *.tar.gz
 *.class
-*.jar
 *.zip
 *.a
 *.output

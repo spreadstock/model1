@@ -12,7 +12,12 @@ import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStream;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Calendar;
+import java.util.Date;
+import java.util.GregorianCalendar;
 import java.util.Properties;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -32,6 +37,7 @@ public class CleanTool
     static int COL_CLOSE = 4;
     static int COL_VOLUME = 5;
     static int COL_ADJUSTED = 6;
+    private static ArrayList<String> maxRows = new ArrayList<String>();
 
 
     public static void main(String[] args)
@@ -51,9 +57,135 @@ public class CleanTool
         {
             System.out.println("train file:" + file.getFileName());
             readFileByLines(file);
+        }
+        System.out.println("max file date:" + maxRows.size());
+        LogError.getLogger().info("max file date:" + maxRows.size());
+        fullMissingData(files);
+        for (FileStock file : files)
+        {
+            System.out.println("write file:" + file.getFileName());
             writeToFile(file);
         }
         System.out.println("finish cleanup data");
+    }
+
+
+    private static void fullMissingData(ArrayList<FileStock> files)
+    {
+        for (FileStock file : files)
+        {
+            if (file.getContent().size() < maxRows.size())
+            {
+                LogError.getLogger().info("missing data file Name:" + file.getFileName());
+                addMissingData(file, maxRows);
+            }
+        }
+
+    }
+
+
+    private static void addMissingData(FileStock file, ArrayList<String> maxRows)
+    {
+        for (String item : maxRows)
+        {
+            if (!containData(file, item))
+            {
+//                System.out.println("addMissingData:" + file.getFileName() + "    " + item);
+                LogError.getLogger().info("addMissingData:" + file.getFileName() + "  " + item);
+                copyNearestData(file, item);
+            }
+        }
+
+    }
+
+
+    private static void copyNearestData(FileStock file, String date)
+    {
+        if(file.getContent().size() ==0)
+        {
+            return;
+        }
+        HistoryItems firstItem = file.getContent().get(0);
+        HistoryItems lastItem = file.getContent().get(file.getContent().size() - 1);
+        HistoryItems copyItem = null;
+        String firstDay = firstItem.getDate();
+        String lastDay = lastItem.getDate();
+        SimpleDateFormat format = new SimpleDateFormat("yyyy/MM/dd");
+        long firstDayT;
+        long lastDayT;
+        long dateT;
+        try
+        {
+            firstDayT = format.parse(firstDay).getTime();
+            lastDayT = format.parse(lastDay).getTime();
+            dateT = format.parse(date).getTime();
+            if (dateT < firstDayT)
+            {
+                return;
+//                copyItem = firstItem;
+            }
+            else if (dateT > lastDayT)
+            {
+                copyItem = lastItem;
+            }
+            else
+            {
+                copyItem = findPreviousItem(file, date);
+            }
+
+        }
+        catch (ParseException e)
+        {
+            e.printStackTrace();
+        }
+
+        HistoryItems item = new HistoryItems();
+        item.setDate(date);
+        item.setOpen(copyItem.getOpen());
+        item.setHigh(copyItem.getHigh());
+        item.setLow(copyItem.getLow());
+        item.setClose(copyItem.getClose());
+        item.setVolume(0);
+        item.setAdjusted(0);
+        item.calculateAverage();
+        file.getContent().add(file.getContent().indexOf(copyItem)+1, item);
+    }
+
+
+    private static HistoryItems findPreviousItem(FileStock file, String date)
+    {
+        String[] parsedDay = date.split("/");
+        SimpleDateFormat format = new SimpleDateFormat("yyyy/MM/dd");
+        Calendar calendar = new GregorianCalendar(Integer.parseInt(parsedDay[0]), Integer.parseInt(parsedDay[1]) - 1,
+                        Integer.parseInt(parsedDay[2]), 0, 0, 0);
+        calendar.add(Calendar.DAY_OF_MONTH, -1);
+        Date newDate = calendar.getTime();
+        HistoryItems result = null;
+        for (HistoryItems item : file.getContent())
+        {
+            if (item.getDate().equals(format.format(newDate)))
+            {
+                result = item;
+            }
+        }
+        if (result == null)
+        {
+            result = findPreviousItem(file, format.format(newDate));
+        }
+        return result;
+    }
+
+
+    private static boolean containData(FileStock file, String date)
+    {
+        for (HistoryItems item : file.getContent())
+        {
+            if (item.getDate().equals(date))
+            {
+                return true;
+            }
+        }
+        return false;
     }
 
 
@@ -156,7 +288,7 @@ public class CleanTool
             dest.deleteOnExit();
             dest.mkdir();
 
-            fw = new FileWriter(newPath + "/" + file.getFileName());
+            fw = new FileWriter(newPath + "/" + file.getNewFileName());
 
             long begin3 = System.currentTimeMillis();
 
@@ -234,7 +366,7 @@ public class CleanTool
         }
         catch (Exception e)
         {
-            LogError.getLogger().error("trainLine error:"+ file.getFileName() +"  "+ tempString , e);
+            LogError.getLogger().error("trainLine error:" + file.getFileName() + "  " + tempString, e);
             e.printStackTrace();
         }
     }
@@ -251,27 +383,14 @@ public class CleanTool
         item.setClose(new Double(tmp[COL_CLOSE]));
         item.setVolume(new Long(tmp[COL_VOLUME]));
         item.setAdjusted(new Double(tmp[COL_ADJUSTED]));
-        
-        if(isValidDataValue(item))
-        {
-            item.calculateAverage();
-            file.fulfillPrevious(item);
-            file.addItem(item);  
-        }
-        else
-        {
-            LogError.getLogger().debug("Filtered "+file.getFileName() + ":   " + tempString);
-        }
-    }
 
-
-    private static boolean isValidDataValue(HistoryItems item)
-    {
-        if(item.getVolume() == 0 || item.getAdjusted() == 0)
+        item.calculateAverage();
+        file.fulfillPrevious(item);
+        file.addItem(item);
+        if(!maxRows.contains(item.getDate()))
         {
-            return false;
+            maxRows.add(item.getDate()); 
         }
-        return true;
     }
 
 
