@@ -9,7 +9,7 @@ library(scales)
 #SH601098<- loadStock(stock.folder, "SH601098","Op")
 loadStock <- function(stock.folder, stock.name, operation.name = "Cl")
 {
-  tmp <- read.csv(paste(stock.folder, stock.name, '.txt', sep=''), sep='\t', check.names=FALSE)
+  tmp <- read.csv(paste(stock.folder, stock.name, '.txt', sep=','), sep='\t', check.names=FALSE)
   stock1  <- xts(tmp[,-1],as.Date(tmp[,1],"%Y/%m/%d"))
   if (operation.name == "Op") {
     return (Op(stock1))
