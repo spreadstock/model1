@@ -114,10 +114,10 @@ buildDistance <- function (x, returnColumn) {
 
 
 
-start_date <- "2014-01-01"
-end_date <- "2016-04-01"
-stock.folder <- 'C:/important/ideas/stock/stockdata/'
-stock_symbols <- c("SH600037","SH600088", "SH600136", "SH600229", "SH600373", "SH600576", "SH600633", "SH600637", "SH600715","SH600757", "SH600825", "SH600831", "SH600959","SH601098", "SH601801", "SH601900", "SH601928", "SH601929","SH601999","SH603598","SH603999") 
+start_date <- "2012-01-01"
+end_date <- "2015-01-01"
+stock.folder <- 'C:/important/ideas/stock/projects/model1/StockDatas/Bluechips/'
+stock_symbols <- listStocksFromDir(stock.folder)
 
 entStocks <- loadMultipleStock(stock.folder, stock_symbols)
 
@@ -150,15 +150,15 @@ topListCounted <- topListCounted[order(-topListCounted$freq),]
 
 
 # # check pair 1 to 10 & 13, 7, 14
-stockMixed <- x[,1]
-stockMixed <- cbind (stockMixed, x[,10])
-stockMixed <- cbind (stockMixed, x[,13])
-stockMixed <- cbind (stockMixed, x[,7])
-stockMixed <- cbind (stockMixed, x[,14])
-
-yy <-rollingV1_1(x=stockMixed, width=30, FUN=buildDistance, PREFUN=calcuateLogReturn, returnColumn=c("Close.9", "Close.12", "Close.6", "Close.13"))
-g<-drawLine(ldata = yy, title="Relation with SH600551", ylab = "Distance")
-print(g)
+# stockMixed <- x[,1]
+# stockMixed <- cbind (stockMixed, x[,10])
+# stockMixed <- cbind (stockMixed, x[,13])
+# stockMixed <- cbind (stockMixed, x[,7])
+# stockMixed <- cbind (stockMixed, x[,14])
+# 
+# yy <-rollingV1_1(x=stockMixed, width=30, FUN=buildDistance, PREFUN=calcuateLogReturn, returnColumn=c("Close.9", "Close.12", "Close.6", "Close.13"))
+# g<-drawLine(ldata = yy, title="Relation with SH600551", ylab = "Distance")
+# print(g)
 
 
 

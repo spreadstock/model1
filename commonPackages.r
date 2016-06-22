@@ -2,6 +2,7 @@ library(quantmod)
 library(plyr)
 library(ggplot2)
 library(scales)
+library(stringr)
 
 #loadStock loads single stock a
 #Example, 
@@ -62,6 +63,12 @@ loadMultipleStock <- function(stock.folder, stock.name.list, operation.name = "C
     entStocks <- cbind(entStocks, loadStock(stock.folder, n, operation.name))
   } 
   return (entStocks)
+}
+
+listStocksFromDir <- function(stock.folder, pattern="*.txt")
+{
+  stockList <- list.files(path=stock.folder, pattern=pattern)
+  return (word(stockList,sep=fixed(".")))
 }
 
 calcuateLogReturn <- function(x)
