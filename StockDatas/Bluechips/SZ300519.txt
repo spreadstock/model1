@@ -1,0 +1,1 @@
+Date, 300519.Open, 300519.High, 300519.Low, 300519.Close, 300519.Volume, 300519.Adjusted
