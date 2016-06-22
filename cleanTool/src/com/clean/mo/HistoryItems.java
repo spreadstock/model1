@@ -155,12 +155,17 @@ public class HistoryItems
 
     public String toString()
     {
+//        return date + "," + new BigDecimal(open).setScale(2, BigDecimal.ROUND_HALF_UP).toString() + ","
+//                        + new BigDecimal(high).setScale(2, BigDecimal.ROUND_HALF_UP).toString() + ","
+//                        + new BigDecimal(low).setScale(2, BigDecimal.ROUND_HALF_UP).toString() + ","
+//                        + new BigDecimal(close).setScale(2, BigDecimal.ROUND_HALF_UP).toString() + "," + volume + ","
+//                        + new BigDecimal(adjusted).setScale(2, BigDecimal.ROUND_HALF_UP).toString() + "," + average
+//                        + "\n";
         return date + "," + new BigDecimal(open).setScale(2, BigDecimal.ROUND_HALF_UP).toString() + ","
-                        + new BigDecimal(high).setScale(2, BigDecimal.ROUND_HALF_UP).toString() + ","
-                        + new BigDecimal(low).setScale(2, BigDecimal.ROUND_HALF_UP).toString() + ","
-                        + new BigDecimal(close).setScale(2, BigDecimal.ROUND_HALF_UP).toString() + "," + volume + ","
-                        + new BigDecimal(adjusted).setScale(2, BigDecimal.ROUND_HALF_UP).toString() + "," + average
-                        + "\n";
+        + new BigDecimal(high).setScale(2, BigDecimal.ROUND_HALF_UP).toString() + ","
+        + new BigDecimal(low).setScale(2, BigDecimal.ROUND_HALF_UP).toString() + ","
+        + new BigDecimal(close).setScale(2, BigDecimal.ROUND_HALF_UP).toString() + "," + volume + ","
+        + new BigDecimal(adjusted).setScale(2, BigDecimal.ROUND_HALF_UP).toString() + "\n";
     }
 
 

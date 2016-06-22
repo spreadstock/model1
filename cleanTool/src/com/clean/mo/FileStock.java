@@ -54,8 +54,10 @@ public class FileStock
 
     public void setTitle(String tile)
     {
-        this.title = String.format("Date, %s.Open, %s.High, %s.Low, %s.Close, %s.Volume, %s.Adjusted, %s.Average\n", tile, tile,
-                                   tile, tile, tile, tile, tile);
+//        this.title = String.format("Date, %s.Open, %s.High, %s.Low, %s.Close, %s.Volume, %s.Adjusted, %s.Average\n", tile, tile,
+//                                   tile, tile, tile, tile, tile);
+        this.title = String.format("Date, %s.Open, %s.High, %s.Low, %s.Close, %s.Volume, %s.Adjusted\n", tile, tile,
+                                   tile, tile, tile, tile);
     }
 
 
