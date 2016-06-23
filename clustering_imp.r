@@ -87,7 +87,7 @@ getPairList <- function(x, dist) {
   
 }
 
-buildClusting <- function (x, returnColumn) {
+buildClusting <- function (x, returnColumn="") {
   corr <- timeweighted_corr(x)
   corrValue <- 1 - corr$cor
   distance <- as.dist(corrValue)
@@ -111,41 +111,94 @@ buildDistance <- function (x, returnColumn) {
   return (resultValue)
 }
 
+buildClustingFull <- function (x) {
+  corr <- timeweighted_corr(x)
+  corrValue <- 1 - corr$cor
+  distance <- as.dist(corrValue)
+  stockcluster <- hclust(distance,"ave")
+  
+  return (stockcluster)
+}
 
 
-
-start_date <- "2012-01-01"
-end_date <- "2015-01-01"
 stock.folder <- 'C:/important/ideas/stock/projects/model1/StockDatas/Bluechips/'
-stock_symbols <- listStocksFromDir(stock.folder)
+
+#stock_symbols <- listStocksFromDir(stock.folder)
+stock_symbols <- c("SH600000","SH600037","SH600039","SH600053","SH600054","SH600056")
 
 entStocks <- loadMultipleStock(stock.folder, stock_symbols)
 
-x<-subsetByDateRange(entStocks, start_date, end_date)
 
-y <-rollingV1_1(x=x, width=30, FUN=buildClusting, PREFUN=calcuateLogReturn, returnColumn=c("Top1.1","Top1.2","Top1.distance","Top2.1","Top2.2","Top2.distance","Top3.1","Top3.2","Top3.distance","Top4.1","Top4.2","Top4.distance","Top5.1","Top5.2","Top5.distance"))
+par(mfrow = c (2,2))
+
+start_date1 <- "2014-01-01"
+end_date1 <- "2014-04-01"
+xx<-subsetByDateRange(entStocks, start_date1, end_date1)
+xx <- xx[,colSums(is.na(xx)) < nrow(xx)]
+yy <- preProcess(xx)
+yy <- yy[,colSums(yy == 0) < nrow(yy)]
+yyClust <- buildClustingFull(yy)
+plot(yyClust, main=start_date1)
 
 
-topList <- na.omit(coredata(y))
-topList1 <- topList[,c("Top1.1", "Top1.2")]
-names(topList1) <- c("Top.1", "Top.2")
-topList2 <- topList[,c("Top2.1", "Top2.2")]
-names(topList2) <- c("Top.1", "Top.2")
-topList3 <- topList[,c("Top3.1", "Top3.2")]
-names(topList3) <- c("Top.1", "Top.2")
-topList4 <- topList[,c("Top4.1", "Top4.2")]
-names(topList4) <- c("Top.1", "Top.2")
-topList5 <- topList[,c("Top5.1", "Top5.2")]
-names(topList5) <- c("Top.1", "Top.2")
-topList <- topList1
-topList <- rbind(topList, topList2)
-topList <- rbind(topList, topList3)
-topList <- rbind(topList, topList4)
-topList <- rbind(topList, topList5)
+start_date1 <- "2014-04-01"
+end_date1 <- "2014-07-01"
+xx<-subsetByDateRange(entStocks, start_date1, end_date1)
+xx <- xx[,colSums(is.na(xx)) < nrow(xx)]
+yy <- preProcess(xx)
+yy <- yy[,colSums(yy == 0) < nrow(yy)]
+yyClust <- buildClustingFull(yy)
+plot(yyClust, main=start_date1)
 
-topListCounted <- count(topList)
-#topListCounted <- topListCounted[order(topListCounted$x.Top1.1,-topListCounted$freq,topListCounted$x.Top1.2),]
-topListCounted <- topListCounted[order(-topListCounted$freq),]
+
+start_date1 <- "2014-07-01"
+end_date1 <- "2014-10-01"
+xx<-subsetByDateRange(entStocks, start_date1, end_date1)
+xx <- xx[,colSums(is.na(xx)) < nrow(xx)]
+yy <- preProcess(xx)
+yy <- yy[,colSums(yy == 0) < nrow(yy)]
+yyClust <- buildClustingFull(yy)
+plot(yyClust, main=start_date1)
+
+start_date1 <- "2014-10-01"
+end_date1 <- "2015-01-01"
+xx<-subsetByDateRange(entStocks, start_date1, end_date1)
+xx <- xx[,colSums(is.na(xx)) < nrow(xx)]
+yy <- preProcess(xx)
+yy <- yy[,colSums(yy == 0) < nrow(yy)]
+yyClust <- buildClustingFull(yy)
+plot(yyClust, main=start_date1)
+
+par(mfrow=c(1,1))
+# start_date <- "2012-01-01"
+# end_date <- "2015-01-01"
+# 
+# #daily rolling
+# x<-subsetByDateRange(entStocks, start_date, end_date)
+# 
+# y <-rollingV1_1(x=x, width=30, FUN=buildClusting, PREFUN=calcuateLogReturn, returnColumn=c("Top1.1","Top1.2","Top1.distance","Top2.1","Top2.2","Top2.distance","Top3.1","Top3.2","Top3.distance","Top4.1","Top4.2","Top4.distance","Top5.1","Top5.2","Top5.distance"))
+# 
+# 
+# topList <- na.omit(coredata(y))
+# topList1 <- topList[,c("Top1.1", "Top1.2")]
+# names(topList1) <- c("Top.1", "Top.2")
+# topList2 <- topList[,c("Top2.1", "Top2.2")]
+# names(topList2) <- c("Top.1", "Top.2")
+# topList3 <- topList[,c("Top3.1", "Top3.2")]
+# names(topList3) <- c("Top.1", "Top.2")
+# topList4 <- topList[,c("Top4.1", "Top4.2")]
+# names(topList4) <- c("Top.1", "Top.2")
+# topList5 <- topList[,c("Top5.1", "Top5.2")]
+# names(topList5) <- c("Top.1", "Top.2")
+# topList <- topList1
+# topList <- rbind(topList, topList2)
+# topList <- rbind(topList, topList3)
+# topList <- rbind(topList, topList4)
+# topList <- rbind(topList, topList5)
+# 
+# topListCounted <- count(topList)
+# #topListCounted <- topListCounted[order(topListCounted$x.Top1.1,-topListCounted$freq,topListCounted$x.Top1.2),]
+# topListCounted <- topListCounted[order(-topListCounted$freq),]
 
 
 

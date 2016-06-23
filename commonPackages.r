@@ -98,7 +98,7 @@ calcuateSMA <- function(x, n)
 #calcuate time weighted correlation
 #x, multiple stocks on time serials. x must contain more than one stocks
 #timeWeighted, weighted value. Weight reduced as timeWeighted^n, where n is number of days
-timeweighted_corr <- function(x, timeWeighted=1)
+timeweighted_corr <- function(x, timeWeighted=0.98)
 {
   numberOfDays <- nrow (x) - 1
   lam = timeWeighted
@@ -140,5 +140,6 @@ drawLine<-function(ldata,title="Stock_MA",ylab="Value",sDate=min(index(ldata)),e
   if(out) ggsave(g,file=paste(titie,".png",sep=""))
   return (g)
 }
+
 
 
