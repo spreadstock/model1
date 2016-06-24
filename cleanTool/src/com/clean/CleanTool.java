@@ -271,7 +271,7 @@ public class CleanTool
     {
         FileStock filestock = new FileStock();
         filestock.setFileName(file.getName());
-        String stockId = file.getName().split("#")[1].split("\\.")[0];
+        String stockId = file.getName().split("\\.")[0].replace("#", "");
         filestock.setStockId(stockId);
         filestock.setTitle(stockId);
         filestock.setFile(file);
