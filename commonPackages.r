@@ -4,6 +4,16 @@ library(ggplot2)
 library(scales)
 library(stringr)
 
+
+#writeStock write processed result into a csv file
+#Example, 
+#stock.folder <- 'C:/important/ideas/stock/projects/model1/testResult/'
+#writeStock(stock.output, "SH601098")
+writeStock <- function(x, stock.folder, ouput.name)
+{
+  write.csv(x=x, file=paste(stock.folder, ouput.name, ".csv",sep=""))
+}
+
 #loadStock loads single stock a
 #Example, 
 #stock.folder <- 'C:/important/ideas/stock/stockdata/'
@@ -134,7 +144,7 @@ drawLine<-function(ldata,title="Stock_MA",ylab="Value",sDate=min(index(ldata)),e
   g<-ggplot(aes(x=Index, y=Value),data=fortify(ldata[,1],melt=TRUE))
   g<-g+geom_line()
   g<-g+geom_line(aes(colour=Series),data=fortify(ldata[,-1],melt=TRUE))
-  g<-g+scale_x_date(labels=date_format("%d/%m%y"),breaks=date_breaks(majorBreaks),minor_breaks=date_breaks(minorBreaks), limits = c(sDate,eDate))
+  g<-g+scale_x_date(labels=date_format("%d/%m/%y"),breaks=date_breaks(majorBreaks),minor_breaks=date_breaks(minorBreaks), limits = c(sDate,eDate))
   g<-g+xlab("") + ylab(ylab)+ggtitle(title)
   
   if(out) ggsave(g,file=paste(titie,".png",sep=""))
@@ -142,4 +152,6 @@ drawLine<-function(ldata,title="Stock_MA",ylab="Value",sDate=min(index(ldata)),e
 }
 
 
-
+testFun <-function(x, threshold, yesValue=1, noValue=0) {
+  return (ifelse(x <= threshold, yesValue, noValue))
+}
