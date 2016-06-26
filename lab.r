@@ -29,6 +29,23 @@ for (i in 1:(totalPoint-1)) {
 
 }
 
+changeSize2 = 5
+stockB1 <- 10
+for (i in 1:(totalPoint-1)) {
+  sit <- i %% 4
+  if (sit == 0) {
+    stockB1<- c(stockB1, (10 + i))
+  } else if (sit == 1) {
+    stockB1 <- c(stockB1, (10 + changeSize2 + i))
+  } else if (sit == 2) {
+    stockB1 <- c(stockB1, (10 + i))
+  } else if (sit == 3) {
+    stockB1 <- c(stockB1, (10 - changeSize + i))
+  } 
+  
+}
+
+
 stockC <- 1
 for (i in 1:(totalPoint-1)) {
   stockC <- c(stockC, increaseFun(i) )
@@ -81,3 +98,13 @@ print(paste("Cor B C:", cor(stockB, stockC)))
 cov(stockB, stockD)
 print(paste("Cov B D:", cov(stockB, stockD)))
 print(paste("Cor B D:", cor(stockB, stockD)))
+
+
+cov(stockB, stockB1)
+print(paste("Cov B B1:", cov(stockB, stockB1)))
+print(paste("Cor B B1:", cor(stockB, stockB1)))
+
+#use time weighted solution
+xx<-cbind(stockB,stockD)
+print(timeweighted_corr(x,1)$cor)
+print(timeweighted_corr(x,0.5)$cor)
