@@ -2,7 +2,7 @@ preProcess <- function(x) {
   return (calcuateLogReturn(x))
 }
 
-rollingV1_1 <- function(x, width, FUN, PREFUN) {
+rollingV1_1 <- function(x, width, FUN, PREFUN, stockSymbols) {
   
   xIn <- x
   timeList <- index(x)
@@ -35,10 +35,50 @@ rollingV1_1 <- function(x, width, FUN, PREFUN) {
       #rollingResult <- list(corr=matrix(NA,nrow=6,ncol=6))
     } else {
       #call function first window
-      rollingResult <- FUN(firstWindow)
+      rollingResult1 <- FUN(firstWindow)
+      rollingResult <- as.matrix(rollingResult1$corr)
+
+      # put back missed columns
+      resultNames <- colnames(rollingResult)
+      if (length(resultNames) != length(stockSymbols)) {
+        prevItem <- ""
+        processedN <- 0
+        for (aItem in stockSymbols) {
+          if (aItem %in% resultNames) {
+            prevItem <- aItem 
+          } else {
+            #insert a column between prev and current
+            aStockItem <-rep(99, length(resultNames)+processedN)
+            aStockItem1 <-rep(99, length(resultNames)+processedN+1)
+            if (prevItem == "") {
+              rollingResult <- cbind (aStockItem, rollingResult)
+              rollingResult <- rbind (aStockItem1, rollingResult)
+            } else {
+              if (prevItem == resultNames[length(resultNames)]) {
+                rollingResult <- cbind (rollingResult, aStockItem)
+                rollingResult <- rbind (rollingResult, aStockItem1)
+              } else {
+                curPos <- which (resultNames == prevItem)  
+                rollingResult <- cbind(rollingResult, aStockItem)
+                rollingResult<- rollingResult[, c(1:curPos,ncol(rollingResult),(curPos+1):(ncol(rollingResult)-1))]
+                rollingResult <- rbind(rollingResult, aStockItem1)
+                rollingResult<- rollingResult[c(1:curPos,ncol(rollingResult),(curPos+1):(ncol(rollingResult)-1)),]
+              }
+              
+            }
+            processedN <- processedN + 1
+          }
+        }
+        colnames(rollingResult) <- stockSymbols
+        rownames(rollingResult) <- stockSymbols
+        rollingResult1$corr <- rollingResult
+      }
+
+      rollingResultList <- c(rollingResultList, rollingResult1)
 
     }
-    rollingResultList <- c(rollingResultList, rollingResult) 
+    
+     
     
   }
   
@@ -130,7 +170,7 @@ stock.folder <- 'C:/important/ideas/stock/projects/model1/StockDatas/Bluechips/'
 stock.output <- 'C:/important/ideas/stock/projects/model1/testResult/'
 
 stock_symbols <- listStocksFromDir(stock.folder)
-#stock_symbols <- c("SH600000","SH600037","SH600039","SH600053","SH600054","SH600056")
+#stock_symbols <- c("SH600000","SH600037","SH600039","SH600053","SH600054","SH600056", "SH600090", "SH600094", "SH600074")
 
 entStocks <- loadMultipleStock(stock.folder, stock_symbols)
 
@@ -180,51 +220,48 @@ entStocks <- loadMultipleStock(stock.folder, stock_symbols)
 start_date <- "2014-01-01"
 end_date <- "2015-01-01"
 
-#daily rolling
-x<-subsetByDateRange(entStocks, start_date, end_date)
-
-y <-rollingV1_1(x=x, width=30, FUN=buildClusting, PREFUN=calcuateLogReturn)
-
-
 #build stock header
 stock_symbols2 <- NULL
 for (aSymb in stock_symbols) {
   stock_symbols2 <- c (stock_symbols2, paste(aSymb, "Close", sep="."))
 }
 
-obsResult <- matrix(0,ncol=(length(stock_symbols)), dimnames = list(NULL, stock_symbols))
-  for (anObservation in y) {
-    anObsMatr <- as.matrix(anObservation)
 
-    #for (aSelectedStock in 1:nrow(anObsMatr)) {
-    for (aSelectedStock in 1) {
-      #select one stock
-      anObsMatrOne <- anObsMatr[aSelectedStock,]
-      anObsMatrOneNameList <- names(anObsMatrOne)
-      aLine <- rep(0, length(stock_symbols))
-      names(aLine) <- stock_symbols2
-      
-      
-      for (aStockItem in 1:length(anObsMatrOne)) {
-        anObsMatrOneProcessed <- testFun(anObsMatrOne[aStockItem], threshold=0.8)
-        aLine[anObsMatrOneNameList[aStockItem]] <- anObsMatrOneProcessed
-      }
-      obsResult <- rbind(obsResult, aLine)
-      rownames(obsResult)[nrow(obsResult)] <- stock_symbols[aSelectedStock]
-      
-  }  
-}
+#daily rolling
+x<-subsetByDateRange(entStocks, start_date, end_date)
+
+y <-rollingV1_1(x=x, width=30, FUN=buildClusting, PREFUN=calcuateLogReturn, stockSymbols=stock_symbols2)
+
+yy <- lapply(y, testFun, threshold=0.8)
+
+
+# obsResult <- matrix(0,ncol=(length(stock_symbols)), dimnames = list(NULL, stock_symbols))
+#   for (anObservation in y) {
+#     anObsMatr <- as.matrix(anObservation)
+# 
+#     for (aSelectedStock in 1:nrow(anObsMatr)) {
+#     #for (aSelectedStock in 1) {
+#       #select one stock
+#       anObsMatrOne <- anObsMatr[aSelectedStock,]
+#       anObsMatrOneNameList <- names(anObsMatrOne)
+#       aLine <- rep(0, length(stock_symbols))
+#       names(aLine) <- stock_symbols2
+#       
+#       anObsMatrOneProcessed <- testFun(anObsMatrOne, threshold=0.8)
+#       for (aStockItem in 1:length(anObsMatrOne)) {
+#         aLine[anObsMatrOneNameList[aStockItem]] <- anObsMatrOneProcessed[aStockItem]
+#       }
+#       obsResult <- rbind(obsResult, aLine)
+#       rownames(obsResult)[nrow(obsResult)] <- stock_symbols[aSelectedStock]
+#       
+#   }  
+# }
 
 
 #sum up
-topList <- matrix(data = colSums(obsResult[rownames(obsResult) %in% c("SH600000"),]), ncol=length(stock_symbols), dimnames = list("SH600000",stock_symbols) )
-# for (aSymb in stock_symbols[-1]) {
-#   aItem <- colSums(obsResult[rownames(obsResult) %in% aSymb,])
-#   topList <- rbind(topList, aItem)
-#   rownames(topList)[nrow(topList)] <- aSymb
-# }
-
-writeStock(x=topList, stock.folder=stock.output, ouput.name="topList")
+obsResult <- Reduce("+", yy)
+# 
+writeStock(x=obsResult, stock.folder=stock.output, ouput.name="topList")
 
 # 
 # topList <- na.omit(coredata(y))
