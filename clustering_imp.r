@@ -7,11 +7,6 @@ rollingV1_1 <- function(x, width, FUN, PREFUN, stockSymbols) {
   xIn <- x
   timeList <- index(x)
   
-#  rollingResultList <- data.frame(dist = I(list(corr=matrix(NA,nrow=6,ncol=6))), nrow=width-1,ncol=1)
-#  rollingResultList <- list(corr=matrix(NA,nrow=6,ncol=6))
-#  for ( i in 2:width -1) {
-#    rollingResultList <- c(rollingResultList, list(corr=matrix(NA,nrow=6,ncol=6)))
-#  }
   rollingResultList <- list()
 
   for (aNext in 1:(length(timeList)-width + 1)) {
@@ -23,7 +18,6 @@ rollingV1_1 <- function(x, width, FUN, PREFUN, stockSymbols) {
     
     #clean up data, remove stocks which miss data
     firstWindow <- firstWindow[,colSums(is.na(firstWindow)) < width]
-    #firstWindow <- removeNA(firstWindow)
     firstWindow <- na.locf(firstWindow, fromLast = FALSE)
     firstWindow <- na.locf(firstWindow, fromLast = TRUE)
     firstWindow <- PREFUN (firstWindow)
@@ -32,8 +26,8 @@ rollingV1_1 <- function(x, width, FUN, PREFUN, stockSymbols) {
     
     #cannot proceed, if only one column or nothing in window
     if ((ncol(firstWindow) < 2) | (nrow(firstWindow) == 0)) {
-      #rollingResult <- list(corr=matrix(NA,nrow=6,ncol=6))
-    } else {
+
+          } else {
       #call function first window
       rollingResult1 <- FUN(firstWindow)
       rollingResult <- as.matrix(rollingResult1$corr)
@@ -82,8 +76,7 @@ rollingV1_1 <- function(x, width, FUN, PREFUN, stockSymbols) {
     
   }
   
-  
-  
+
   #add time line
   #rollingResultTimed <- xts(x=rollingResultList, order.by=timeList)
   
@@ -131,17 +124,19 @@ getPairList <- function(x, dist) {
   
 }
 
-buildClusting <- function (x) {
+buildCorr <- function (x) {
   corr <- timeweighted_corr(x, 0.98)
   corrValue <- 1 - corr$cor
   corrValueList <- list(corr=corrValue)
-  #distance <- as.dist(corrValue)
-  #stockcluster <- hclust(distance,"ave")
-  
-  #build pair list
-  #rollingResult <- getPairList(stockcluster$merge, stockcluster$height)
-  
+
   return (corrValueList)
+}
+
+buildClusting <- function (x) {
+  distance <- as.dist(x)
+  stockcluster <- hclust(distance,"ave")
+  
+  return (stockcluster)
 }
 
 buildDistance <- function (x, returnColumn) {
@@ -170,9 +165,76 @@ stock.folder <- 'C:/important/ideas/stock/projects/model1/StockDatas/Bluechips/'
 stock.output <- 'C:/important/ideas/stock/projects/model1/testResult/'
 
 stock_symbols <- listStocksFromDir(stock.folder)
-#stock_symbols <- c("SH600000","SH600037","SH600039","SH600053","SH600054","SH600056", "SH600090", "SH600094", "SH600074")
+#stock_symbols <- c("SH600000","SH600037","SH600039","SH600053","SH600054","SH600056", "SH600090", "SH600094", "SH600074","SH601872","SH601908")
+#stock_symbols <- c("SH601872","SH601908","SH601933","SH603006","SH603009","SH603010", "SH603017","SH603019","SH603020")
 
-entStocks <- loadMultipleStock(stock.folder, stock_symbols)
+#entStocks <- loadMultipleStock(stock.folder, stock_symbols)
+
+
+start_date <- "2014-01-01"
+end_date <- "2015-01-01"
+
+
+x<-subsetByDateRange(entStocks, start_date, end_date)
+#remove stocks, if having less than 30 days data in the window
+x<-subset(x, select=(colSums(is.na(x)) <= (nrow(x) - 30) ))
+
+#build stock header
+stock_symbols2 <- colnames(x)
+
+
+#daily rolling
+#y <-rollingV1_1(x=x, width=30, FUN=buildCorr, PREFUN=calcuateLogReturn, stockSymbols=stock_symbols2)
+#yy <- lapply(y, testFun, threshold=0.8)
+
+
+
+#sum up
+#obsResult <- Reduce("+", yy)
+# 
+#writeStock(x=obsResult, stock.folder=stock.output, ouput.name="topList")
+
+
+#build clustering
+obsDistances <- apply(obsResult,MARGIN=1, FUN=standFun)
+obsCluster <- buildClusting(obsDistances)
+
+
+
+# 
+# topList <- na.omit(coredata(y))
+# topList1 <- topList[,c("Top1.1", "Top1.2")]
+# names(topList1) <- c("Top.1", "Top.2")
+# topList2 <- topList[,c("Top2.1", "Top2.2")]
+# names(topList2) <- c("Top.1", "Top.2")
+# topList3 <- topList[,c("Top3.1", "Top3.2")]
+# names(topList3) <- c("Top.1", "Top.2")
+# topList4 <- topList[,c("Top4.1", "Top4.2")]
+# names(topList4) <- c("Top.1", "Top.2")
+# topList5 <- topList[,c("Top5.1", "Top5.2")]
+# names(topList5) <- c("Top.1", "Top.2")
+# topList <- topList1
+# topList <- rbind(topList, topList2)
+# topList <- rbind(topList, topList3)
+# topList <- rbind(topList, topList4)
+# topList <- rbind(topList, topList5)
+# # 
+# topListCounted <- count(topList)
+# #topListCounted <- topListCounted[order(topListCounted$x.Top1.1,-topListCounted$freq,topListCounted$x.Top1.2),]
+# topListCounted <- topListCounted[order(-topListCounted$freq),]
+
+
+
+# # check pair 1 to 10 & 13, 7, 14
+# stockMixed <- x[,286]
+# stockMixed <- cbind (stockMixed, x[,272])
+# stockMixed <- cbind (stockMixed, x[,285])
+# #stockMixed <- cbind (stockMixed, x[,7])
+# #stockMixed <- cbind (stockMixed, x[,14])
+# 
+# yy <-rollingV1_1(x=stockMixed, width=30, FUN=buildDistance, PREFUN=calcuateLogReturn, returnColumn=c("X002139.Close", "X002093.Close", "X002138.Close"))
+# g<-drawLine(ldata = yy, title="Relation with SH600551", ylab = "Distance")
+# print(g)
 
 
 # par(mfrow = c (2,2))
@@ -216,89 +278,6 @@ entStocks <- loadMultipleStock(stock.folder, stock_symbols)
 # plot(yyClust, main=start_date1)
 # 
 # par(mfrow=c(1,1))
-
-start_date <- "2014-01-01"
-end_date <- "2015-01-01"
-
-#build stock header
-stock_symbols2 <- NULL
-for (aSymb in stock_symbols) {
-  stock_symbols2 <- c (stock_symbols2, paste(aSymb, "Close", sep="."))
-}
-
-
-#daily rolling
-x<-subsetByDateRange(entStocks, start_date, end_date)
-
-y <-rollingV1_1(x=x, width=30, FUN=buildClusting, PREFUN=calcuateLogReturn, stockSymbols=stock_symbols2)
-
-yy <- lapply(y, testFun, threshold=0.8)
-
-
-# obsResult <- matrix(0,ncol=(length(stock_symbols)), dimnames = list(NULL, stock_symbols))
-#   for (anObservation in y) {
-#     anObsMatr <- as.matrix(anObservation)
-# 
-#     for (aSelectedStock in 1:nrow(anObsMatr)) {
-#     #for (aSelectedStock in 1) {
-#       #select one stock
-#       anObsMatrOne <- anObsMatr[aSelectedStock,]
-#       anObsMatrOneNameList <- names(anObsMatrOne)
-#       aLine <- rep(0, length(stock_symbols))
-#       names(aLine) <- stock_symbols2
-#       
-#       anObsMatrOneProcessed <- testFun(anObsMatrOne, threshold=0.8)
-#       for (aStockItem in 1:length(anObsMatrOne)) {
-#         aLine[anObsMatrOneNameList[aStockItem]] <- anObsMatrOneProcessed[aStockItem]
-#       }
-#       obsResult <- rbind(obsResult, aLine)
-#       rownames(obsResult)[nrow(obsResult)] <- stock_symbols[aSelectedStock]
-#       
-#   }  
-# }
-
-
-#sum up
-obsResult <- Reduce("+", yy)
-# 
-writeStock(x=obsResult, stock.folder=stock.output, ouput.name="topList")
-
-# 
-# topList <- na.omit(coredata(y))
-# topList1 <- topList[,c("Top1.1", "Top1.2")]
-# names(topList1) <- c("Top.1", "Top.2")
-# topList2 <- topList[,c("Top2.1", "Top2.2")]
-# names(topList2) <- c("Top.1", "Top.2")
-# topList3 <- topList[,c("Top3.1", "Top3.2")]
-# names(topList3) <- c("Top.1", "Top.2")
-# topList4 <- topList[,c("Top4.1", "Top4.2")]
-# names(topList4) <- c("Top.1", "Top.2")
-# topList5 <- topList[,c("Top5.1", "Top5.2")]
-# names(topList5) <- c("Top.1", "Top.2")
-# topList <- topList1
-# topList <- rbind(topList, topList2)
-# topList <- rbind(topList, topList3)
-# topList <- rbind(topList, topList4)
-# topList <- rbind(topList, topList5)
-# # 
-# topListCounted <- count(topList)
-# #topListCounted <- topListCounted[order(topListCounted$x.Top1.1,-topListCounted$freq,topListCounted$x.Top1.2),]
-# topListCounted <- topListCounted[order(-topListCounted$freq),]
-
-
-
-# # check pair 1 to 10 & 13, 7, 14
-# stockMixed <- x[,286]
-# stockMixed <- cbind (stockMixed, x[,272])
-# stockMixed <- cbind (stockMixed, x[,285])
-# #stockMixed <- cbind (stockMixed, x[,7])
-# #stockMixed <- cbind (stockMixed, x[,14])
-# 
-# yy <-rollingV1_1(x=stockMixed, width=30, FUN=buildDistance, PREFUN=calcuateLogReturn, returnColumn=c("X002139.Close", "X002093.Close", "X002138.Close"))
-# g<-drawLine(ldata = yy, title="Relation with SH600551", ylab = "Distance")
-# print(g)
-
-
 
 
 

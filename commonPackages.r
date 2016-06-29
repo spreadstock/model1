@@ -155,3 +155,8 @@ drawLine<-function(ldata,title="Stock_MA",ylab="Value",sDate=min(index(ldata)),e
 testFun <-function(x, threshold, yesValue=1, noValue=0) {
   return (ifelse(x <= threshold, yesValue, noValue))
 }
+
+standFun <-function(x) {
+  itsMax <- max(x)
+  return (1 - x / itsMax)
+}
