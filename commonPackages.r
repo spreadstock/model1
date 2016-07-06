@@ -3,7 +3,7 @@ library(plyr)
 library(ggplot2)
 library(scales)
 library(stringr)
-
+library(quantstrat)
 
 #writeStock write processed result into a csv file
 #Example, 
@@ -173,3 +173,24 @@ standFun <-function(x) {
 divFun <- function (x) {
   return (x / x[1])
 }
+
+#getRangeSummary(stock1,start_date, end_date, "year")
+getRangeSummary<- function(stock, start_date=start(rangeStock), end_date=end(rangeStock), kType="month")
+{
+  range <- paste(start_date, "::", end_date, sep = "")
+  rangeStock <-  stock[range,]
+
+  if (kType == "year") {
+    return (to.yearly(rangeStock,drop.time=FALSE))
+  }
+  else if (kType == "month") {
+    return (to.monthly(rangeStock,indexAt = 'endof',drop.time=FALSE))
+  }
+  else if (kType == "week") {
+    return (to.weekly(rangeStock,drop.time=FALSE))
+  }
+  else {
+    return (to.daily(rangeStock,drop.time=FALSE))
+  }
+}
+
