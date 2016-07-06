@@ -90,6 +90,13 @@ calcuateLogReturn <- function(x)
   return (dx)
 }
 
+calcuateStandarize <- function(x)
+{
+  dx <- na.omit(x)
+  return ( apply(X=dx, MARGIN=2, FUN=divFun))
+}
+
+
 calcuateSimpleReturn <- function(x)
 {
   dx <- na.omit(x)
@@ -140,7 +147,7 @@ subsetByDateRange <- function(x, start_date=start(x), end_date=end(x))
 #major breaks, the major breaks on X axis
 #minor breaks, the minor breaks on X axis
 #out, if save to output file. 
-drawLine<-function(ldata,title="Stock_MA",ylab="Value",sDate=min(index(ldata)),eDate=max(index(ldata)),majorBreaks="2 month", minorBreaks="1 week", out=FALSE){
+drawLine<-function(ldata,title="Stock_MA",ylab="Value",sDate=min(index(ldata)),eDate=max(index(ldata)),majorBreaks="1 week", minorBreaks="1 day", out=FALSE){
   g<-ggplot(aes(x=Index, y=Value),data=fortify(ldata[,1],melt=TRUE))
   g<-g+geom_line()
   g<-g+geom_line(aes(colour=Series),data=fortify(ldata[,-1],melt=TRUE))
@@ -152,6 +159,8 @@ drawLine<-function(ldata,title="Stock_MA",ylab="Value",sDate=min(index(ldata)),e
 }
 
 
+
+
 testFun <-function(x, threshold, yesValue=1, noValue=0) {
   return (ifelse(x <= threshold, yesValue, noValue))
 }
@@ -159,4 +168,8 @@ testFun <-function(x, threshold, yesValue=1, noValue=0) {
 standFun <-function(x) {
   itsMax <- max(x)
   return (1 - x / itsMax)
+}
+
+divFun <- function (x) {
+  return (x / x[1])
 }
