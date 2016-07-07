@@ -1,3 +1,7 @@
+convertStockNames <- function (x, stockSymbols) {
+  return (paste(stockSymbols[x[1]], " & ", stockSymbols[x[2]], sep = ""))
+}
+
 preProcess <- function(x) {
   return (calcuateLogReturn(x))
 }
@@ -42,8 +46,8 @@ rollingV1_1 <- function(x, width, FUN, PREFUN, stockSymbols) {
             prevItem <- aItem 
           } else {
             #insert a column between prev and current
-            aStockItem <-rep(99, length(resultNames)+processedN)
-            aStockItem1 <-rep(99, length(resultNames)+processedN+1)
+            aStockItem <-rep(9, length(resultNames)+processedN)
+            aStockItem1 <-rep(9, length(resultNames)+processedN+1)
             if (prevItem == "") {
               rollingResult <- cbind (aStockItem, rollingResult)
               rollingResult <- rbind (aStockItem1, rollingResult)
@@ -132,6 +136,14 @@ buildCorr <- function (x) {
   return (corrValueList)
 }
 
+buildCov <- function (x) {
+  cov <- calcuate_cov(x)
+  covValue <- 1 - cov
+  covValueList <- list(corr=covValue)
+  
+  return (covValueList)
+}
+
 buildClusting <- function (x) {
   distance <- as.dist(x)
   stockcluster <- hclust(distance,"ave")
@@ -168,7 +180,7 @@ stock_symbols <- listStocksFromDir(stock.folder)
 #stock_symbols <- c("SH600000","SH600037","SH600039","SH600053","SH600054","SH600056", "SH600090", "SH600094", "SH600074","SH601872","SH601908")
 #stock_symbols <- c("SH601872","SH601908","SH601933","SH603006","SH603009","SH603010", "SH603017","SH603019","SH603020")
 
-#entStocks <- loadMultipleStock(stock.folder, stock_symbols)
+entStocks <- loadMultipleStock(stock.folder, stock_symbols)
 
 
 start_date <- "2014-01-01"
@@ -176,28 +188,46 @@ end_date <- "2015-01-01"
 
 
 x<-subsetByDateRange(entStocks, start_date, end_date)
-#remove stocks, if having less than 30 days data in the window
-x<-subset(x, select=(colSums(is.na(x)) <= (nrow(x) - 30) ))
+#remove stocks, if having less than 120 days data in the window
+x<-subset(x, select=(colSums(is.na(x)) <= (nrow(x) - 120) ))
+stockList <- colnames(x)
 
-#build stock header
-stock_symbols2 <- colnames(x)
+stock_month <- Cl(getRangeSummary(stock=x[,eval(quote(stockList[1]))]))
 
+for(n in stockList[-1]) {
+  stock_month <- cbind(stock_month, Cl(getRangeSummary(stock=x[,eval(quote(n))])))
+}
+colnames(stock_month) <- stockList
 
 #daily rolling
-#y <-rollingV1_1(x=x, width=30, FUN=buildCorr, PREFUN=calcuateLogReturn, stockSymbols=stock_symbols2)
-#yy <- lapply(y, testFun, threshold=0.8)
+monthY <-rollingV1_1(x=stock_month, width=3, FUN=buildCov, PREFUN=calcuateLogReturn, stockSymbols=stockList)
+monthObsResult <- Reduce("+", monthY)
+
+monthResultList <- which(monthObsResult == 0, arr.ind = T)
+monthResultList <- monthResultList[which(monthResultList[,1]!=cc[,2]),]
+
+monthResultNameList <- apply(monthResultList, MARGIN=1, FUN=convertStockNames,stockSymbols=stockList)
 
 
-
-#sum up
-#obsResult <- Reduce("+", yy)
+# #build stock header
+# stock_symbols2 <- colnames(x)
 # 
-#writeStock(x=obsResult, stock.folder=stock.output, ouput.name="topList")
-
-
-#build clustering
-obsDistances <- apply(obsResult,MARGIN=1, FUN=standFun)
-obsCluster <- buildClusting(obsDistances)
+# 
+# #daily rolling
+# #y <-rollingV1_1(x=x, width=30, FUN=buildCorr, PREFUN=calcuateLogReturn, stockSymbols=stock_symbols2)
+# #yy <- lapply(y, testFun, threshold=0.8)
+# 
+# 
+# 
+# #sum up
+# #obsResult <- Reduce("+", yy)
+# # 
+# #writeStock(x=obsResult, stock.folder=stock.output, ouput.name="topList")
+# 
+# 
+# #build clustering
+# obsDistances <- apply(obsResult,MARGIN=1, FUN=standFun)
+# obsCluster <- buildClusting(obsDistances)
 
 
 

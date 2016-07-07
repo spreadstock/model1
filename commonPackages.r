@@ -127,6 +127,15 @@ timeweighted_corr <- function(x, timeWeighted=0.98)
   
 }
 
+#calcuate cov
+#x, multiple stocks on time serials. x must contain more than one stocks
+calcuate_cov <- function(x)
+{
+  covResult = sign(cov(x))
+  covResult
+  
+}
+
 #subset of stock data by date range
 #x, multiple stocks on time serials. x must contain at least one stocks data
 #start_date, start of range. when not presented, the first date will be used
@@ -170,12 +179,14 @@ standFun <-function(x) {
   return (1 - x / itsMax)
 }
 
+
+
 divFun <- function (x) {
   return (x / x[1])
 }
 
 #getRangeSummary(stock1,start_date, end_date, "year")
-getRangeSummary<- function(stock, start_date=start(rangeStock), end_date=end(rangeStock), kType="month")
+getRangeSummary<- function(stock, start_date=start(stock), end_date=end(stock), kType="month")
 {
   range <- paste(start_date, "::", end_date, sep = "")
   rangeStock <-  stock[range,]
