@@ -9,7 +9,7 @@ library(quantstrat)
 #Example, 
 #stock.folder <- 'C:/important/ideas/stock/projects/model1/testResult/'
 #writeStock(stock.output, "SH601098")
-writeStock <- function(x, stock.folder, ouput.name)
+writeStock <- function(x, stock.folder="", ouput.name)
 {
   write.csv(x=x, file=paste(stock.folder, ouput.name, ".csv",sep=""))
 }
@@ -205,3 +205,10 @@ getRangeSummary<- function(stock, start_date=start(stock), end_date=end(stock), 
   }
 }
 
+
+#Convert stock id to stock name
+#Attention, this function assumes the order of stockId is aligned with stock symbols
+covertStockId2Name <- function(stockId, stockSymbols)
+{
+  return (stockSymbols[stockId])
+}

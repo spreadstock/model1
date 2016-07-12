@@ -1,6 +1,15 @@
 convertStockNames <- function (x, stockSymbols) {
-  return (paste(stockSymbols[x[1]], " & ", stockSymbols[x[2]], sep = ""))
+  if (length(x) != 0) {
+    aResult <- stockSymbols[x[1]]
+    
+    for (i in 2:length(x)) {
+      aResult <- paste(aResult, " & ", stockSymbols[x[i]], sep = "")
+    }
+    return (aResult)
+    
+  }
 }
+
 
 preProcess <- function(x) {
   return (calcuateLogReturn(x))
@@ -11,7 +20,7 @@ rollingV1_1 <- function(x, width, FUN, PREFUN, stockSymbols) {
   xIn <- x
   timeList <- index(x)
   
-  rollingResultList <- list()
+  rollingResultList <- vector("list", (length(timeList)-width + 1))
 
   for (aNext in 1:(length(timeList)-width + 1)) {
     startPoint <- timeList[aNext]
@@ -30,11 +39,12 @@ rollingV1_1 <- function(x, width, FUN, PREFUN, stockSymbols) {
     
     #cannot proceed, if only one column or nothing in window
     if ((ncol(firstWindow) < 2) | (nrow(firstWindow) == 0)) {
+      rollingResult <- matrix(9, ncol=length(stockSymbols), nrow=length(stockSymbols))
 
           } else {
       #call function first window
       rollingResult1 <- FUN(firstWindow)
-      rollingResult <- as.matrix(rollingResult1$corr)
+      rollingResult <- as.matrix(rollingResult1)
 
       # put back missed columns
       resultNames <- colnames(rollingResult)
@@ -69,12 +79,10 @@ rollingV1_1 <- function(x, width, FUN, PREFUN, stockSymbols) {
         }
         colnames(rollingResult) <- stockSymbols
         rownames(rollingResult) <- stockSymbols
-        rollingResult1$corr <- rollingResult
       }
 
-      rollingResultList <- c(rollingResultList, rollingResult1)
-
     }
+    rollingResultList[[aNext]] <- rollingResult
     
      
     
@@ -131,17 +139,15 @@ getPairList <- function(x, dist) {
 buildCorr <- function (x) {
   corr <- timeweighted_corr(x, 0.98)
   corrValue <- 1 - corr$cor
-  corrValueList <- list(corr=corrValue)
 
-  return (corrValueList)
+  return (corrValue)
 }
 
 buildCov <- function (x) {
   cov <- calcuate_cov(x)
   covValue <- 1 - cov
-  covValueList <- list(corr=covValue)
-  
-  return (covValueList)
+
+  return (covValue)
 }
 
 buildClusting <- function (x) {
@@ -172,6 +178,39 @@ buildClustingFull <- function (x) {
   return (stockcluster)
 }
 
+build1stLevelClusting <- function (stock_month, stockSymbols) {
+  #daily rolling
+  monthY <-rollingV1_1(x=stock_month, width=3, FUN=buildCov, PREFUN=calcuateLogReturn, stockSymbols=stockSymbols)
+  monthObsResult <- Reduce("+", monthY)
+  
+  monthResultList <- as.data.frame(which(monthObsResult == 0, arr.ind = T))
+  colnames(monthResultList) <- c("col","row")
+  monthResultList <- subset(monthResultList, col!=row)
+  
+  #monthResultNameList <- apply(monthResultList, MARGIN=1, FUN=convertStockNames,stockSymbols=stockList)
+  
+  monthResultIndex1 <- unique(monthResultList[,2])
+  monthResultIndex2 <- monthResultIndex1
+  monthResultGroups <- vector("list", length(monthResultIndex1))
+  groupId <-1
+  
+  for (aStockItem in monthResultIndex1) {
+    if (length(monthResultIndex2) != 0) {
+      if (aStockItem %in% monthResultIndex2) {
+        aGroup <- subset(monthResultList, col==aStockItem, select=c(row), drop=TRUE)
+        aGroup <- c(aGroup, aStockItem)
+        monthResultGroups[[groupId]] <- aGroup
+        groupId <- groupId + 1
+        monthResultIndex2 <- monthResultIndex2[!(monthResultIndex2 %in% aGroup)]
+        
+      }
+    }
+  }
+  
+  return (monthResultGroups)
+}
+
+
 
 stock.folder <- 'C:/important/ideas/stock/projects/model1/StockDatas/Bluechips/'
 stock.output <- 'C:/important/ideas/stock/projects/model1/testResult/'
@@ -180,10 +219,10 @@ stock_symbols <- listStocksFromDir(stock.folder)
 #stock_symbols <- c("SH600000","SH600037","SH600039","SH600053","SH600054","SH600056", "SH600090", "SH600094", "SH600074","SH601872","SH601908")
 #stock_symbols <- c("SH601872","SH601908","SH601933","SH603006","SH603009","SH603010", "SH603017","SH603019","SH603020")
 
-entStocks <- loadMultipleStock(stock.folder, stock_symbols)
+#entStocks <- loadMultipleStock(stock.folder, stock_symbols)
 
 
-start_date <- "2014-01-01"
+start_date <- "2013-01-01"
 end_date <- "2015-01-01"
 
 
@@ -199,29 +238,42 @@ for(n in stockList[-1]) {
 }
 colnames(stock_month) <- stockList
 
-#daily rolling
-monthY <-rollingV1_1(x=stock_month, width=3, FUN=buildCov, PREFUN=calcuateLogReturn, stockSymbols=stockList)
-monthObsResult <- Reduce("+", monthY)
 
-monthResultList <- which(monthObsResult == 0, arr.ind = T)
-monthResultList <- monthResultList[which(monthResultList[,1]!=cc[,2]),]
+#monthResultGroups <- build1stLevelClusting (stock_month,stockList)
+monthResultNameList <- vector()
+for (aItem in 1:length(monthResultGroups)) {
+  monthResultNameList <- c(monthResultNameList, convertStockNames(x=monthResultGroups[[aItem]],stockSymbols=stockList))
+}  
+numberOfGroups <- length(monthResultNameList)
 
-monthResultNameList <- apply(monthResultList, MARGIN=1, FUN=convertStockNames,stockSymbols=stockList)
+
+obsResult <- vector("list", numberOfGroups)
+for (aGroupItem in 1:numberOfGroups) {
+#build stock header
+  stock_symbols2 <- vector()
+  for (aStock in monthResultGroups[[aGroupItem]]) {
+    stock_symbols2 <- c(stock_symbols2, covertStockId2Name(stockId=aStock,stockSymbols=stockList))
+  }
+  #build stock list
+  aGroupStocks <- x[,stock_symbols2[1]]
+  for (aStock in stock_symbols2[-1]) {
+    aGroupStocks <- cbind(aGroupStocks, x[,aStock])
+  }
+  #daily rolling
+  y <-rollingV1_1(x=aGroupStocks, width=30, FUN=buildCorr, PREFUN=calcuateLogReturn, stockSymbols=stock_symbols2)
+  yy <- lapply(y, testFun, threshold=0.8)
+  #
+  #sum up
+  obsResult[[aGroupItem]] <- Reduce("+", yy)
 
 
-# #build stock header
-# stock_symbols2 <- colnames(x)
-# 
-# 
-# #daily rolling
-# #y <-rollingV1_1(x=x, width=30, FUN=buildCorr, PREFUN=calcuateLogReturn, stockSymbols=stock_symbols2)
-# #yy <- lapply(y, testFun, threshold=0.8)
-# 
-# 
-# 
-# #sum up
-# #obsResult <- Reduce("+", yy)
-# # 
+}
+
+
+
+
+
+
 # #writeStock(x=obsResult, stock.folder=stock.output, ouput.name="topList")
 # 
 # 
