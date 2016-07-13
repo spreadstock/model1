@@ -165,7 +165,7 @@ public class HistoryItems
         + new BigDecimal(high).setScale(2, BigDecimal.ROUND_HALF_UP).toString() + ","
         + new BigDecimal(low).setScale(2, BigDecimal.ROUND_HALF_UP).toString() + ","
         + new BigDecimal(close).setScale(2, BigDecimal.ROUND_HALF_UP).toString() + "," + volume + ","
-        + new BigDecimal(adjusted).setScale(2, BigDecimal.ROUND_HALF_UP).toString() + "\n";
+        + new BigDecimal(average).setScale(2, BigDecimal.ROUND_HALF_UP).toString() + "\n";
     }
 
 

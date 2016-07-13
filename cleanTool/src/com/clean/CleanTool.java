@@ -22,6 +22,7 @@ import java.util.Properties;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import com.clean.adjust.AdjustedTool;
 import com.clean.mo.FileStock;
 import com.clean.mo.HistoryItems;
 
@@ -61,6 +62,8 @@ public class CleanTool
         System.out.println("max file date:" + maxRows.size());
         LogError.getLogger().info("max file date:" + maxRows.size());
         fullMissingData(files);
+        
+//        AdjustedData(files);
         for (FileStock file : files)
         {
             System.out.println("write file:" + file.getFileName());
@@ -70,7 +73,14 @@ public class CleanTool
     }
 
 
-    private static void fullMissingData(ArrayList<FileStock> files)
+    private static void AdjustedData(ArrayList<FileStock> files)
+    {
+        AdjustedTool tool = new AdjustedTool();
+        tool.AdjustedData(files);
+    }
+
+
+    public static void fullMissingData(ArrayList<FileStock> files)
     {
         for (FileStock file : files)
         {
@@ -251,7 +261,7 @@ public class CleanTool
     }
 
 
-    private static ArrayList<FileStock> getAllFiles()
+    public static ArrayList<FileStock> getAllFiles()
     {
         ArrayList<FileStock> files = new ArrayList<FileStock>();
         File file = new File(path);
@@ -267,7 +277,7 @@ public class CleanTool
     }
 
 
-    private static FileStock trainStockFile(File file)
+    public static FileStock trainStockFile(File file)
     {
         FileStock filestock = new FileStock();
         filestock.setFileName(file.getName());
@@ -385,6 +395,11 @@ public class CleanTool
         item.setAdjusted(new Double(tmp[COL_ADJUSTED]));
 
         item.calculateAverage();
+        //remove last line whoes volume is 0
+        if(item.getVolume() == 0)
+        {
+            return;
+        }
         file.fulfillPrevious(item);
         file.addItem(item);
         if(!maxRows.contains(item.getDate()))
