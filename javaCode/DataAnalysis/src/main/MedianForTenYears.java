@@ -14,18 +14,19 @@ import java.util.List;
 import java.util.Map;
 
 import bean.CompareBean;
+import bean.CompareBean2;
 import bean.MonthlyBean;
 
 import util.Utils;
 
 
-public class Median {
+public class MedianForTenYears {
 	
 	public static void main(String[] args) {
 		System.out.println("hello world");
 		String path = "C:\\Users\\esunnen\\Documents\\model1\\StockDatas\\Bluechips";
-		String startDate0 = "2013/12/31";
-		String endDate0 = "2015/01/01";
+		String startDate0 = "2003/12/31";
+		String endDate0 = "2014/01/01";
 		List<String> list = Utils.getFileList(path);
 		
 		SimpleDateFormat sdf = new SimpleDateFormat("yyyy/MM/dd");
@@ -56,9 +57,6 @@ public class Median {
 	        			i++;
 	        			
 	        			if (sdf.parse(str[0]).after(startDate) && sdf.parse(str[0]).before(endDate)) {
-//	        				System.out.println(str[0]);
-//	        				System.out.println(startDate);
-//	        				System.out.println(endDate);
 	        				String month = str[0].substring(0, 7);
 		        			if (Utils.isEmpty(monthlyBean.getMonth()) ||
 		        					!monthlyBean.getMonth().equals(month)) {
@@ -150,31 +148,72 @@ public class Median {
 			}
 		}
 		
-		
-		
+		List<String> keyList = new ArrayList<String>();
 		
 		 // output
 		 Iterator it = resultMap.entrySet().iterator();
 
 		   while (it.hasNext()) {
-		    Map.Entry entry = (Map.Entry) it.next();
+		   	Map.Entry entry = (Map.Entry) it.next();
 		    Object key = entry.getKey();
 		    Object value = entry.getValue();
-		    if (value.toString().contains(",")) {
-	
-//	    		System.out.println(key.toString().length());
-	    		if (key.toString().length() == 24) {
-	    			System.out.println("key=" + key + "\t " + value);
-	    		}
-	    		
-
-		    	
-		    	
-//		    	System.out.println(value);
-		    }
-		    
+//		    System.out.println(key.toString().length());
+		    if (key.toString().length() == 120) {
+		    	keyList.add(key.toString());
+		    } 
 
 		   }
+		   
+		   System.out.println(keyList.size());
+		   
+		   List<CompareBean2> compareResultFor10YearsList = new ArrayList<CompareBean2>();
+		   for (int i = 0; i < keyList.size(); i++) {
+			   String str = keyList.get(i);
+			   
+			   CompareBean2 bean2 = new CompareBean2();
+			   // key
+			   bean2.setName(str);
+			   for (int j = 0; j < keyList.size(); j++) {
+				   String str2 = keyList.get(j);
+				   int tmp = 0;
+				   for(int z = 0; z < 120; z++) {
+					   if (str.substring(z, z +1).equals(str2.substring(z, z +1))) {
+						   tmp++;
+					   }
+				   }
+				   
+				   if (tmp > 100 && tmp != 120) {
+					   bean2.getResultList().put(str, tmp);
+					   bean2.setName2(str2);
+				   }
+				   
+			   }
+			   
+			   compareResultFor10YearsList.add(bean2);
+//			   System.out.println(str);
+		   }
+		   
+		   
+		   for (int i = 0; i < compareResultFor10YearsList.size(); i++) {
+			   CompareBean2 bean2 = compareResultFor10YearsList.get(i);
+			   
+			   Map<String, Integer> map = bean2.getResultList();
+			   
+			   Iterator it2 = map.entrySet().iterator();
+
+			   while (it2.hasNext()) {
+			   	Map.Entry entry = (Map.Entry) it2.next();
+			    Object key = entry.getKey();
+			    Object value = entry.getValue();
+//			    System.out.println(key.toString().length());
+			    
+			    System.out.println(resultMap.get(bean2.getName2()) + "  " + resultMap.get(key) + "  " + value);
+//			    System.out.println(bean2.getResult());
+
+			   }
+			   
+		   }
+		   
 		   System.out.println("Finished!!");
 		
 		

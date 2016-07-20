@@ -20,7 +20,7 @@ import bean.MonthlyBean;
 import util.Utils;
 
 
-public class MakeCsvOfMedian {
+public class MakeCsvOfAverageMakeCsvOfAverage {
 	
 	public static void main(String[] args) {
 		System.out.println("hello world");
@@ -66,12 +66,12 @@ public class MakeCsvOfMedian {
 		        				
 		        				monthlyBean.setName(name);
 		        				monthlyBean.setMonth(month);
-		        				monthlyBean.setFirstDay(month + "/01");
-		        				// close value
-		        				monthlyBean.getCloseDataList().add(str[4]);
+		        				monthlyBean.setFirstDay(str[0]);
+		        				// Volume value
+		        				monthlyBean.getCloseDataList().add(str[5]);
 		        			} else {
-		        				// close value
-		        				monthlyBean.getCloseDataList().add(str[4]);
+		        				// Volume value
+		        				monthlyBean.getCloseDataList().add(str[5]);
 		        			}
 	        			}
 	        		}
@@ -90,13 +90,13 @@ public class MakeCsvOfMedian {
 		}
 		
 		
-		// set Median value
+		// set average value
 		for (int i = 0; i < dataList.size(); i++) {
 			MonthlyBean bean = dataList.get(i);
 			
 			List<String> dailyDataList = bean.getCloseDataList();
 			String[] str = (String[])dailyDataList.toArray(new String[dailyDataList.size()]);
-			bean.setMedian(Utils.getMedian(str));
+			bean.setAverage(Utils.getAverage(str));
 			
 		}
 		
@@ -113,20 +113,20 @@ public class MakeCsvOfMedian {
 				
 				LinkedHashMap map = new LinkedHashMap();
 		        map.put("1", "Date");
-		        map.put("2", tmpName + ".Close");
+		        map.put("2", tmpName + ".Volume");
 				
-		        Utils.createCSVFile(exportData, map, "C:\\Users\\esunnen\\Documents\\model1\\StockDatas\\Median\\", tmpName);
+		        Utils.createCSVFile(exportData, map, "C:\\Users\\esunnen\\Documents\\model1\\StockDatas\\AverageOfVolume\\", tmpName);
 		        
 		        exportData  = new ArrayList<Map<String, String>>();
 				tmpName = monthlyBean.getName();
 				Map<String, String> row = new LinkedHashMap<String, String>();
 				row.put("1", monthlyBean.getFirstDay());
-				row.put("2", String.valueOf(monthlyBean.getMedian()));
+				row.put("2", String.valueOf(monthlyBean.getAverage()));
 				exportData.add(row);
 			} else {
 				Map<String, String> row = new LinkedHashMap<String, String>();
 				row.put("1", monthlyBean.getFirstDay());
-				row.put("2", String.valueOf(monthlyBean.getMedian()));
+				row.put("2", String.valueOf(monthlyBean.getAverage()));
 				exportData.add(row);
 			}
 			
@@ -134,8 +134,8 @@ public class MakeCsvOfMedian {
 		
 		LinkedHashMap map = new LinkedHashMap();
         map.put("1", "Date");
-        map.put("2", tmpName + ".Close");
-        Utils.createCSVFile(exportData, map, "C:\\Users\\esunnen\\Documents\\model1\\StockDatas\\Median\\", tmpName);
+        map.put("2", tmpName + ".Volume");
+        Utils.createCSVFile(exportData, map, "C:\\Users\\esunnen\\Documents\\model1\\StockDatas\\AverageOfVolume\\", tmpName);
         
         System.out.println("Finished!!");
 		
