@@ -249,52 +249,32 @@ add.signal(
   label = "longEntry"
 )  
 
+enterAtr<-0
 tradeSize <- initEq/100
-osFixedMoney <- function(timestamp, orderqty, portfolio, symbol, ruletype, ...)
+osFixedMoneyFirstEntry <- function(timestamp, orderqty, portfolio, symbol, ruletype, ...)
 {
   Atr <- as.numeric(mktdata[timestamp,]$atr)
+  enterAtr <- Atr
   orderqty <- round(tradeSize/Atr,-2)
   return (orderqty)
 }
   
-add.rule(
-  qs.strategy,
-  name = 'ruleSignal',
-  arguments = list(
-    sigcol = "longEntry",
-    sigval = TRUE,
-    orderqty = 900,
-    ordertype = 'market',
-    orderside = 'long',
-    osFUN='osFixedMoney',
-	orderset='ocolong'),
-  type = 'enter',
-  label='FirstEnter'
-)
 
-#########################################
-#stop loss
-stopLossPercent <- 0.05 
+#applyRules(portfolio=multi.trend, symbol='SH600000',strategy=qs.strategy, mktdata=mktdata)  
 
-add.rule(
-  qs.strategy,
-  name = 'ruleSignal',
-  arguments = list(
-    sigcol = "signal.gt.zero",
-    sigval = TRUE,
-	replace=FALSE,
-	orderside = 'long',
-    ordertype = 'stoplimit',
-    tmult=TRUE,
-	threshold=quote( stopLossPercent ),
-	orderqty = 'all',
-	orderset='ocolong'),
-    type = 'chain',
-	parent="FirstEnter",
-	label='StopLossLong',
-	enabled=FALSE) 
 
-enable.rule(qs.strategy, type="chain", label="StopLoss")
+#加仓，每次剩余资金的10%
+osPercentEquity <- function(timestamp, orderqty, portfolio,symbol, ruletype,trade.percent = 0.1,...)
+{
+    trading.pl <-sum(getTxns(Portfolio = portfolio, Symbol = symbol)$Txn.Value)
+    total.equity <- initEq - trading.pl
+    tradeSize <- total.equity * trade.percent
+    ClosePrice <- as.numeric(Cl(mktdata[timestamp, ]))
+    orderqty <- round(tradeSize / ClosePrice,-2)
+    return(orderqty)
+}
+  
+
 	
 ######################################################
 
@@ -421,20 +401,92 @@ add.signal(
   ),
   label = "longExit"
 ) 
-  
+
+#########################################
+# last(getPrice(mktdata)[paste('::',as.character(curIndex),sep='')][,1]) * 0.00003
+# normal enter
+.txnFees=-0.1
+
+add.rule(
+  qs.strategy,
+  name = 'ruleSignal',
+  arguments = list(
+    sigcol = "longEntry",
+    sigval = TRUE,
+	replace=FALSE,
+	TxnFees=.txnFees,
+    orderqty = 900,
+    ordertype = 'market',
+	prefer='High',
+    orderside = 'long',
+    osFUN='osFixedMoneyFirstEntry',
+	orderset='ocolong'),
+  type = 'enter',
+  label='FirstEnter'
+)
+
+#normal exit 
 add.rule(
   qs.strategy,
   name = 'ruleSignal',
   arguments = list(
     sigcol = "longExit",
     sigval = TRUE,
+	replace=TRUE,
+	prefer='Low',
+	TxnFees=.txnFees,
     orderqty = 'all',
     ordertype = 'market',
     orderside = 'long',
 	orderset='ocolong'),
-  type = 'exit'
+  type = 'exit',
+  label='ExitLONG'
 )
- 
+
+#stop loss
+stopLossPercent <- 0.01
+add.rule(
+  qs.strategy,
+  name = 'ruleSignal',
+  arguments = list(
+    sigcol = "longEntry",
+    sigval = TRUE,
+	replace=FALSE,
+	TxnFees=.txnFees,
+	orderside = 'long',
+    ordertype = 'stoplimit',
+    tmult=TRUE,
+	threshold=quote( stopLossPercent ),
+	orderqty = 'all',
+	orderset='ocolong'),
+    type = 'chain',
+	parent="FirstEnter",
+	label='StopLossLong',
+	enabled=FALSE) 
+
+.stoptrailing=0.01	
+add.rule(
+      qs.strategy, 
+      name = 'ruleSignal',
+	  arguments=list(
+		sigcol='longEntry', 
+		sigval=TRUE,
+		replace=FALSE,
+		orderside='long',
+		ordertype='stoptrailing', 
+		tmult=TRUE, 
+		threshold=quote(.stoptrailing),
+		TxnFees=.txnFees,
+		orderqty='all',
+		orderset='ocolong'
+	),
+	type='chain', parent='EnterLONG',
+	label='StopTrailingLONG',
+	enabled=FALSE
+)
+
+enable.rule(qs.strategy, type="chain", label="StopLossLong")
+enable.rule(qs.strategy, type="chain", label="StopTrailingLONG")
 	
 #########################################
 
