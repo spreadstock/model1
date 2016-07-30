@@ -82,6 +82,16 @@ loadMultipleStock <- function(stock.folder, stock.name.list, operation.name = "C
   return (entStocks)
 }
 
+loadMultipleStockList <- function(stock.folder, stock.name.list, operation.name = "Cl")
+{
+  entStocks <- list(loadStock(stock.folder, stock.name.list[1], operation.name))
+  
+  for(n in stock.name.list[-1]) {
+    entStocks <- cbind(entStocks, list(loadStock(stock.folder, n, operation.name)))
+  } 
+  return (entStocks)
+}
+
 listStocksFromDir <- function(stock.folder, pattern="*.txt")
 {
   stockList <- list.files(path=stock.folder, pattern=pattern)

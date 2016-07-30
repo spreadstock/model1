@@ -66,7 +66,7 @@ public class MakeCsvOfAverage {
 		        				
 		        				monthlyBean.setName(name);
 		        				monthlyBean.setMonth(month);
-		        				monthlyBean.setFirstDay(str[0]);
+		        				monthlyBean.setFirstDay(month + "/01");
 		        				// close value
 		        				monthlyBean.getCloseDataList().add(str[4]);
 		        			} else {

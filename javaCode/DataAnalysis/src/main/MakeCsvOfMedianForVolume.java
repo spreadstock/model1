@@ -20,7 +20,7 @@ import bean.MonthlyBean;
 import util.Utils;
 
 
-public class MakeCsvOfMedian {
+public class MakeCsvOfMedianForVolume {
 	
 	public static void main(String[] args) {
 		System.out.println("hello world");
@@ -66,12 +66,12 @@ public class MakeCsvOfMedian {
 		        				
 		        				monthlyBean.setName(name);
 		        				monthlyBean.setMonth(month);
-		        				monthlyBean.setFirstDay(month + "/01");
-		        				// close value
-		        				monthlyBean.getCloseDataList().add(str[4]);
+		        				monthlyBean.setFirstDay(str[0]);
+		        				// Volume value
+		        				monthlyBean.getCloseDataList().add(str[5]);
 		        			} else {
-		        				// close value
-		        				monthlyBean.getCloseDataList().add(str[4]);
+		        				// Volume value
+		        				monthlyBean.getCloseDataList().add(str[5]);
 		        			}
 	        			}
 	        		}
@@ -113,9 +113,9 @@ public class MakeCsvOfMedian {
 				
 				LinkedHashMap map = new LinkedHashMap();
 		        map.put("1", "Date");
-		        map.put("2", tmpName + ".Close");
+		        map.put("2", tmpName + ".Volume");
 				
-		        Utils.createCSVFile(exportData, map, "C:\\Users\\esunnen\\Documents\\model1\\StockDatas\\Median\\", tmpName);
+		        Utils.createCSVFile(exportData, map, "C:\\Users\\esunnen\\Documents\\model1\\StockDatas\\MedianOfVolume\\", tmpName);
 		        
 		        exportData  = new ArrayList<Map<String, String>>();
 				tmpName = monthlyBean.getName();
@@ -134,8 +134,8 @@ public class MakeCsvOfMedian {
 		
 		LinkedHashMap map = new LinkedHashMap();
         map.put("1", "Date");
-        map.put("2", tmpName + ".Close");
-        Utils.createCSVFile(exportData, map, "C:\\Users\\esunnen\\Documents\\model1\\StockDatas\\Median\\", tmpName);
+        map.put("2", tmpName + ".Volume");
+        Utils.createCSVFile(exportData, map, "C:\\Users\\esunnen\\Documents\\model1\\StockDatas\\MedianOfVolume\\", tmpName);
         
         System.out.println("Finished!!");
 		
