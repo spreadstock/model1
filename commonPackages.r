@@ -4,14 +4,20 @@ library(ggplot2)
 library(scales)
 library(stringr)
 library(quantstrat)
+library(amap)
 
 #writeStock write processed result into a csv file
 #Example, 
 #stock.folder <- 'C:/important/ideas/stock/projects/model1/testResult/'
 #writeStock(stock.output, "SH601098")
-writeStock <- function(x, stock.folder="", ouput.name)
+writeStock <- function(x, stock.folder="", ouput.name, isZoo=FALSE)
 {
-  write.csv(x=x, file=paste(stock.folder, ouput.name, ".csv",sep=""))
+  if (!isZoo) {
+    write.csv(x=x, file=paste(stock.folder, ouput.name, ".csv",sep=""), row.names = TRUE)
+  } else {
+    write.zoo(x=x, file=paste(stock.folder, ouput.name, ".csv",sep=""),sep = ",")
+  }
+  
 }
 
 #loadStock loads single stock a
@@ -57,6 +63,7 @@ loadStock <- function(stock.folder, stock.name, operation.name = "Cl")
   } else if (operation.name == "OHLCV") {
     return (OHLCV(stock1))
   } else {
+    colnames(stock1)  <- stock.name
     return (stock1)
   }
     
@@ -68,7 +75,7 @@ loadStock <- function(stock.folder, stock.name, operation.name = "Cl")
 #entStocks<-loadMultipleStock(stock.folder,stock_symbols)
 loadMultipleStock <- function(stock.folder, stock.name.list, operation.name = "Cl")
 {
-  entStocks <- loadStock(stock.folder, stock.name.list[1])
+  entStocks <- loadStock(stock.folder, stock.name.list[1], operation.name)
   for(n in stock.name.list[-1]) {
     entStocks <- cbind(entStocks, loadStock(stock.folder, n, operation.name))
   } 
@@ -212,3 +219,5 @@ covertStockId2Name <- function(stockId, stockSymbols)
 {
   return (stockSymbols[stockId])
 }
+
+
