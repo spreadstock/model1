@@ -260,8 +260,73 @@ osFixedMoneyFirstEntry <- function(timestamp, orderqty, portfolio, symbol, rulet
 }
   
 
-#applyRules(portfolio=multi.trend, symbol='SH600000',strategy=qs.strategy, mktdata=mktdata)  
+#加仓，当上涨0.5个ATR并且还持有股票的时候，就增加ATR follow的买入信号
+growCertainATRIndex <- function(x, index, ATRRate=0.5) 
+{	
+	closeTnxPrice <- Cl(x[index])
+	atrTnxPrice <- x[index]$atr
+	for (i in index+1:nrow(x))
+    {
+	   if((as.numeric(Cl(x[index])) - as.numeric(closeTnxPrice)) >= (ATRRate * as.numeric(atrTnxPrice)))
+	   {
+	        year <- .indexyear(x[i]) + 1900
+            mon <- .indexmon(x[i]) +1
+            day <- .indexmday(x[i])
+			timestamp <- paste(year, mon, day,sep="-")
+			print(paste("xubin result", timestamp,sep=":"))
+			symbol <- strsplit(colnames(x)[1],"[.]")
+			pos <- getPosQty(multi.trend, symbol, timestamp)
+			if(pos > 0)
+			  return (i)
+	   }
+    }
+	return (0)
+}
 
+findGrowATRSig <- function(x, index, ATRRate=0.5) 
+{
+#如果符合趋势，这index+1是交易点
+     if(x[index]$X1.isvolumeUp == 1 & (x[index]$X1.treat_trendGrowPlus == 1 | x[index]$X1.trendGrowMinus ==1 | x[index]$X1.trained_osc==1 ))  
+	 #if(x[index]$longEntry == 1) 
+	 {
+	     tnxIndex <- index+1
+		 return (growCertainATRIndex(x,tnxIndex))
+	 }
+	 else
+	 {
+	    return (0)
+	 }
+}
+
+addGrowATRSig <- function(x) 
+{
+  a <- matrix(FALSE,nrow=nrow(x),ncol=1)
+  for (i in 2:nrow(x))
+  {
+    index <- findGrowATRSig(x,i)
+	if(index != 0)
+    {
+      a[index] <- TRUE
+    }
+  }
+  return (a) 
+}
+
+
+add.indicator(
+  strategy = qs.strategy,
+  name = "addGrowATRSig",
+  arguments = list(
+    x = quote(mktdata)
+  ),
+  label = "atrTrendFollow"
+)
+
+add.signal(
+  qs.strategy,
+  name = "sigThreshold",
+  arguments = list(column = "atrTrendFollow", relationship = "gt",threshold=0,cross=TRUE),
+  label = "signal.gt.atrTrendFollow")	   
 
 #加仓，每次剩余资金的10%
 osPercentEquity <- function(timestamp, orderqty, portfolio,symbol, ruletype,trade.percent = 0.1,...)
@@ -406,7 +471,7 @@ add.signal(
 # last(getPrice(mktdata)[paste('::',as.character(curIndex),sep='')][,1]) * 0.00003
 # normal enter
 .txnFees=-0.1
-
+#applyRules(portfolio=multi.trend, symbol='SH600000',strategy=qs.strategy, mktdata=mktdata)  
 add.rule(
   qs.strategy,
   name = 'ruleSignal',
@@ -423,6 +488,25 @@ add.rule(
 	orderset='ocolong'),
   type = 'enter',
   label='FirstEnter'
+)
+
+#ATR tradeFollow enter
+add.rule(
+  qs.strategy,
+  name = 'ruleSignal',
+  arguments = list(
+    sigcol = "signal.gt.atrTrendFollow",
+    sigval = TRUE,
+	replace=FALSE,
+	TxnFees=.txnFees,
+    orderqty = 900,
+    ordertype = 'market',
+	prefer='High',
+    orderside = 'long',
+    osFUN='osPercentEquity',
+	orderset='ocolong'),
+  type = 'enter',
+  label='ATRFollowEnter'
 )
 
 #normal exit 
@@ -485,6 +569,28 @@ add.rule(
 	enabled=FALSE
 )
 
+
+add.rule(
+      qs.strategy, 
+      name = 'ruleSignal',
+	  arguments=list(
+		sigcol='signal.gt.atrTrendFollow', 
+		sigval=TRUE,
+		replace=FALSE,
+		orderside='long',
+		ordertype='stoptrailing', 
+		tmult=TRUE, 
+		threshold=quote(.stoptrailing),
+		TxnFees=.txnFees,
+		orderqty='all',
+		orderset='ocolong'
+	),
+	type='chain', parent='ATRFollowEnter',
+	label='StopTrailingATR',
+	enabled=FALSE
+)
+
+
 enable.rule(qs.strategy, type="chain", label="StopLossLong")
 enable.rule(qs.strategy, type="chain", label="StopTrailingLONG")
 	
@@ -499,6 +605,7 @@ updateEndEq(multi.trend)
 
 #getTxns(Portfolio=multi.trend, Symbol="SH600000", "2002-01-07")
 getTxns(Portfolio=multi.trend, Symbol="SH600000")
+
 
 
 
