@@ -1,0 +1,1 @@
+Date, SH603986.Open, SH603986.High, SH603986.Low, SH603986.Close, SH603986.Volume, SH603986.Adjusted
