@@ -1,0 +1,1 @@
+Date, SZ300535.Open, SZ300535.High, SZ300535.Low, SZ300535.Close, SZ300535.Volume, SZ300535.Adjusted
