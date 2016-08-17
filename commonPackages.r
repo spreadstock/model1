@@ -5,6 +5,7 @@ library(scales)
 library(stringr)
 library(quantstrat)
 library(amap)
+library(tseries)
 
 #writeStock write processed result into a csv file
 #Example, 
@@ -62,11 +63,9 @@ loadStock <- function(stock.folder, stock.name, operation.name = "Cl")
     return (OHLC(stock1))
   } else if (operation.name == "OHLCV") {
     return (OHLCV(stock1))
-  } else {
-    colnames(stock1)  <- stock.name
-    return (stock1)
-  }
-    
+  } 
+  return (stock1)
+  
 }
 #loadStock loads multiple stocks
 #Example, 
@@ -113,6 +112,12 @@ calcuateStandarize <- function(x)
   return ( apply(X=dx, MARGIN=2, FUN=divFun))
 }
 
+
+calcuateAbsPrice <- function(x)
+{
+  dx <- na.omit(x)
+  return (dx)
+}
 
 calcuateSimpleReturn <- function(x)
 {
@@ -228,6 +233,16 @@ getRangeSummary<- function(stock, start_date=start(stock), end_date=end(stock), 
 covertStockId2Name <- function(stockId, stockSymbols)
 {
   return (stockSymbols[stockId])
+}
+
+#cointegration test
+cointegrationTest <- function(stockData)
+{
+  m <- lm(stockY ~ stockX + 0, data=stockData)
+  beta <- coef(m)[1]
+  sprd <- stockData$stockY - beta * stockData$stockX
+  ht <- adf.test(sprd, alternative = "stationary", k=0)
+  return (ht$p.value)
 }
 
 

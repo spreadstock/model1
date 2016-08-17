@@ -38,7 +38,7 @@ calRelDirection <- function (X, stockData) {
   theResult <- calRelDirectionForEach(X=otherStock, baseStock=baseStock)
   
   theMatch <- sum(theResult) / nrow(theResult)
-  if (theMatch >= 0.8) {
+  if (theMatch >= 0.75) {
     aRecord <- c(stockList[X[1]], stockList[X[2]], theMatch)
   } else 
     aRecord <- c(NA, NA, NA)
@@ -66,7 +66,9 @@ loadAvg <- function () {
 }
 
 loadMedian <- function (start_date, end_date, symbList = NULL) {
-  stock.folder.med <- 'C:/important/ideas/stock/projects/model1/javaCode/Data/Median/'
+  #stock.folder.med <- 'C:/important/ideas/stock/projects/model1/javaCode/Data/Median/'
+  stock.folder.med <- 'C:/important/ideas/stock/projects/model1/javaCode/Data/Median2/MedianAfter/'
+  #stock.folder.med <- 'C:/important/ideas/stock/projects/model1/javaCode/Data/Median2/'
   
   if (length(symbList) == 0) {
     #symbList <- c("SH600000","SH600037","SH600039","SH600053","SH600054","SH600056", "SH600090", "SH600094", "SH600074","SH601872","SH601908")
@@ -84,7 +86,8 @@ loadMedian <- function (start_date, end_date, symbList = NULL) {
 }
 
 loadDailyClose <- function (start_date, end_date, symbList = NULL) {
-  stock.folder.daily <- 'C:/important/ideas/stock/projects/model1/StockDatas/Bluechips/'
+  #stock.folder.daily <- 'C:/important/ideas/stock/projects/model1/StockDatas/Bluechips/'
+  stock.folder.daily <- 'C:/important/ideas/stock/projects/model1/javaCode/Data/Median2/bank/after/'
   
   if (length(symbList) == 0) {
     #symbList <- c("SH600000","SH600037","SH600039","SH600053","SH600054","SH600056", "SH600090", "SH600094", "SH600074","SH601872","SH601908")
@@ -125,9 +128,11 @@ loadMonthClose <- function () {
 stock.output <- 'C:/important/ideas/stock/projects/model1/testResult/testRel/'
 
 # 1st level processing
-start_date <- "2004-01-01"
-end_date <- "2014-12-31"
+#start_date <- "2004-01-01"
+#end_date <- "2014-12-31"
 
+start_date <- "2012-01-01"
+end_date <- "2014-12-31"
 
 stock_month <- calOwnDirectionWithValue(loadMedian(start_date=start_date, end_date=end_date))
 stockList <- colnames(stock_month)
@@ -137,9 +142,9 @@ finalResult_1st<- t(finalResult_1st[,colSums(is.na(finalResult_1st))<nrow(finalR
 
 refinedStockList <- unique(as.vector(finalResult_1st[,-3]))
 
-# 2nd level processing
+# 2nd level processing, cor
 start_date2 <- "2014-01-01"
-end_date2 <- "2014-12-31"
+end_date2 <- "2014-04-01"
 stock_daily <- loadDailyClose(start_date=start_date2, end_date=end_date2, symbList = refinedStockList)
 
 finalResult_2nd <- vector()
@@ -156,7 +161,18 @@ for (aStockPair in 1:nrow(finalResult_1st)) {
 
 finalResult_1st <- cbind(finalResult_1st, finalResult_2nd)
 
-
+#3rd level process, cointeg
+finalResult_3rd <- vector()
+stock_daily1 <- na.omit(stock_daily)
+for (aStockPair in 1:nrow(finalResult_1st)) {
+  aStock1 <- paste(finalResult_1st[aStockPair,1],"Close", sep=".")
+  aStock2 <- paste(finalResult_1st[aStockPair,2],"Close", sep=".")
+  aStockData <- stock_daily1[,aStock1]
+  aStockData <- cbind(aStockData, stock_daily1[,aStock2])
+  colnames(aStockData) <- c("stockX", "stockY")
+  finalResult_3rd <- c(finalResult_3rd, cointegrationTest(aStockData))
+}
+finalResult_1st <- cbind(finalResult_1st, finalResult_3rd)
 
 # finalResult_2nd <- buildClusting(stock_daily_dist)
 # finalResult_2nd_groups <- cutree(finalResult_2nd, k=6)
