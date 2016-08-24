@@ -37,8 +37,8 @@ calRelDirection <- function (X, stockData) {
   
   theResult <- calRelDirectionForEach(X=otherStock, baseStock=baseStock)
   
-  theMatch <- sum(theResult) / nrow(theResult)
-  if (theMatch >= 0.75) {
+  theMatch <- sum(theResult) / (nrow(theResult)-1)
+  if (theMatch >= 0.15) {
     aRecord <- c(stockList[X[1]], stockList[X[2]], theMatch)
   } else 
     aRecord <- c(NA, NA, NA)
@@ -66,28 +66,35 @@ loadAvg <- function () {
 }
 
 loadMedian <- function (start_date, end_date, symbList = NULL) {
-  #stock.folder.med <- 'C:/important/ideas/stock/projects/model1/javaCode/Data/Median/'
-  stock.folder.med <- 'C:/important/ideas/stock/projects/model1/javaCode/Data/Median2/MedianAfter/'
-  #stock.folder.med <- 'C:/important/ideas/stock/projects/model1/javaCode/Data/Median2/'
+  stock.folder.med <- 'C:/important/ideas/stock/projects/model1/javaCode/Data/Median2/'
+  #stock.folder.med <- 'C:/important/ideas/stock/projects/model1/javaCode/Data/Median2/MedianAfter/'
+  #stock.folder.med <- 'C:/important/ideas/stock/projects/model1/StockDatas/MedianBefore 20160823/'
   
+  symbList <- c("SH600037","SZ002467","SH600856","SH600487")
   if (length(symbList) == 0) {
-    #symbList <- c("SH600000","SH600037","SH600039","SH600053","SH600054","SH600056", "SH600090", "SH600094", "SH600074","SH601872","SH601908")
     symbList <- listStocksFromDir(stock.folder.med)
-   }
+  }
+  
+  entStocks <- loadStock(stock.folder.med, symbList[1])
+  entStocks<-subsetByDateRange(entStocks, start_date, end_date)
+  colnames(entStocks) <- symbList[1]
+  for(n in symbList[-1]) {
+    aStock <- loadStock(stock.folder.med, n)
+    aStock<-subsetByDateRange(aStock, start_date, end_date)
+    colnames(aStock) <- n
+    entStocks <- cbind(entStocks, aStock)
+  }
 
-  
-  entStocks <- loadMultipleStock(stock.folder.med, symbList, operation.name ="Others")
-  
-  x<-subsetByDateRange(entStocks, start_date, end_date)
   #remove stocks, if having less than 120 data in the window
-  #x<-subset(x, select=(colSums(is.na(x)) < 1))
+  entStocks<-subset(entStocks, select=(colSums(is.na(entStocks)) < 1))
   
-  return (x)
+  return (entStocks)
 }
 
 loadDailyClose <- function (start_date, end_date, symbList = NULL) {
   #stock.folder.daily <- 'C:/important/ideas/stock/projects/model1/StockDatas/Bluechips/'
-  stock.folder.daily <- 'C:/important/ideas/stock/projects/model1/javaCode/Data/Median2/bank/after/'
+  #stock.folder.daily <- 'C:/important/ideas/stock/projects/model1/javaCode/Data/Median2/bank/after/'
+  stock.folder.daily <- 'C:/important/ideas/stock/projects/model1/StockDatas/2016-08-09-Former_Rehabilitation_leaned/'
   
   if (length(symbList) == 0) {
     #symbList <- c("SH600000","SH600037","SH600039","SH600053","SH600054","SH600056", "SH600090", "SH600094", "SH600074","SH601872","SH601908")
@@ -131,20 +138,27 @@ stock.output <- 'C:/important/ideas/stock/projects/model1/testResult/testRel/'
 #start_date <- "2004-01-01"
 #end_date <- "2014-12-31"
 
-start_date <- "2012-01-01"
-end_date <- "2014-12-31"
+# start_date <- "2012-01-01"
+# end_date <- "2014-12-31"
+# 
+# stock_month <- calOwnDirectionWithValue(loadMedian(start_date=start_date, end_date=end_date))
+# stockList <- colnames(stock_month)
+# 
+# finalResult_1st <- apply(combn(ncol(stock_month), 2), 2, FUN=calRelDirection, stockData=stock_month)
+# finalResult_1st<- t(finalResult_1st[,colSums(is.na(finalResult_1st))<nrow(finalResult_1st)])
+# 
+# 
+# colnames(finalResult_1st)<- c("Stock1","Stock2","MatchPercentage")
+# outputFile <- "clusteringResult_1st"
+# writeStock(x=finalResult_1st, stock.folder=stock.output, ouput.name=outputFile, isZoo = FALSE)
 
-stock_month <- calOwnDirectionWithValue(loadMedian(start_date=start_date, end_date=end_date))
-stockList <- colnames(stock_month)
-
-finalResult_1st <- apply(combn(ncol(stock_month), 2), 2, FUN=calRelDirection, stockData=stock_month)
-finalResult_1st<- t(finalResult_1st[,colSums(is.na(finalResult_1st))<nrow(finalResult_1st)])
-
-refinedStockList <- unique(as.vector(finalResult_1st[,-3]))
-
+outputFile <- "clusteringResult_1st"
+finalResult_1st <- read.csv(paste(stock.output, outputFile, '.csv', sep=''), sep=',', check.names=FALSE)
+finalResult_1st <- finalResult_1st[,-1]
+refinedStockList <- unique(as.vector(as.matrix(finalResult_1st[,-3])))
 # 2nd level processing, cor
 start_date2 <- "2014-01-01"
-end_date2 <- "2014-04-01"
+end_date2 <- "2014-12-31"
 stock_daily <- loadDailyClose(start_date=start_date2, end_date=end_date2, symbList = refinedStockList)
 
 finalResult_2nd <- vector()
@@ -174,6 +188,9 @@ for (aStockPair in 1:nrow(finalResult_1st)) {
 }
 finalResult_1st <- cbind(finalResult_1st, finalResult_3rd)
 
+colnames(finalResult_1st)<- c("Stock1","Stock2","MatchPercentage","Cor","Cointegration")
+outputFile <- "clusteringResult"
+writeStock(x=finalResult_1st, stock.folder=stock.output, ouput.name=outputFile, isZoo = FALSE)
 # finalResult_2nd <- buildClusting(stock_daily_dist)
 # finalResult_2nd_groups <- cutree(finalResult_2nd, k=6)
 

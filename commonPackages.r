@@ -28,7 +28,9 @@ writeStock <- function(x, stock.folder="", ouput.name, isZoo=FALSE)
 loadStock <- function(stock.folder, stock.name, operation.name = "Cl")
 {
   tmp <- read.csv(paste(stock.folder, stock.name, '.txt', sep=''), sep=',', check.names=FALSE)
+  tmpCol <- colnames(tmp)
   stock1  <- xts(tmp[,-1],as.Date(tmp[,1],"%Y/%m/%d"))
+  colnames(stock1) <- tmpCol[-1]
   if (operation.name == "Op") {
     return (Op(stock1))
   } else if (operation.name == "Hi") {

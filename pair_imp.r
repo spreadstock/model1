@@ -3,17 +3,24 @@ calculate_spread <- function(x) {
 
   aLm <- lm(y ~ x - 1, data=as.data.frame(x))
   betas <- coef(aLm)[1]
-  # yValue <- coredata(x$y)
-  # xValue <- coredata(x$x)
-  # spreadValue <- yValue - betas * xValue
-  
+  #yValue <- coredata(x$y[nrow(x)])
+  #xValue <- coredata(x$x[nrow(x)])
+
   
 #  spreadUpper <- mean(spreadValue, na.rm = TRUE) + sd(spreadValue, na.rm = TRUE)
 #  spreadLower <- mean(spreadValue, na.rm = TRUE) - sd(spreadValue, na.rm = TRUE)
 #  spreadResult <- c(median(spreadValue), betas)
 
   
-  return (betas)
+  return (round(betas,5))
+}
+
+calculate_newSpread <- function(xValue,yValue,beta) {
+  
+  
+  spreadValue <- coredata(yValue) - coredata(beta) * coredata(xValue)
+
+  return (round(spreadValue,5))
 }
 
 # calculate_totalbeta <- function(x, threshold) {
@@ -49,6 +56,14 @@ calculate_totalbeta <- function(x, threshold) {
       }
     }
     return (xx)
+}
+
+calculate_betaPrice <- function(x) {
+  
+  dx <- na.omit(x)
+  beta<-round(dx[,2] / dx[,1],5)
+  colnames(beta) <- c("BetaPrice")
+  return (beta) 
 }
 
 calculate_beta <- function(x) {
@@ -135,12 +150,50 @@ rollingV2_1 <- function(x, width, FUN, PREFUN) {
   #spread <- stockData[,2] - rollingResult * stockData[,1]
   movingAvg = calcuateSMA(spread,lookBack) #Moving average
   movingStd = runSD(spread,lookBack, sample=FALSE) #Moving standard deviation / bollinger bands
-  spreadUpper <- movingAvg + 1.2 * movingStd
-  spreadLower <- movingAvg - 1.2 * movingStd
-  rollingResultTimed <- cbind(spread, rollingResultTimed, spreadUpper, spreadLower,movingAvg)
+  spreadUpper <- movingAvg + 2 * movingStd
+  spreadLower <- movingAvg - 2 * movingStd
+  #rollingResultTimed <- cbind(spread, rollingResultTimed, spreadUpper, spreadLower,movingAvg,0,0, calculate_betaPrice(x))
+  rollingResultTimed <- cbind(spread, rollingResultTimed, spreadUpper, spreadLower,movingAvg,0,0)
   #rollingResultTimed <- cbind(spread, rollingResult, spreadUpper, spreadLower)
 
-  colnames(rollingResultTimed) <- c("Spread","Beta" ,"Upper","Lower", "Mean")
+  colnames(rollingResultTimed) <- c("OldSpread","OldBeta","Upper","Lower", "Mean","Beta","Sprea")
+  
+  #adjust beta
+  lastBetaPoint <- width
+  for (aNext in 2:(length(timeList)-width)) {
+    nextStartPoint <- aNext
+    nextEndPoint <- nextStartPoint + width - 1
+    
+    aBeta <- rollingResultTimed[lastBetaPoint,2]
+    aUpper <- rollingResultTimed[nextEndPoint,3]
+    aLower <- rollingResultTimed[nextEndPoint,4]
+    if (!is.na(aBeta) && !is.na(aUpper) && !is.na(aLower)) {
+      aBetaPrice <- round(x[lastBetaPoint,2] / x[lastBetaPoint,1],5)
+      xValue <- stockData[nextEndPoint,1]
+      yValue <- stockData[nextEndPoint,2]
+      aSpread <- calculate_newSpread(xValue,yValue,aBeta)
+      if ((aSpread > aUpper) | (aSpread < aLower)) {
+        #no need re-calcuate beta, value already available
+        #dataWindow <- stockData[nextStartPoint:nextEndPoint,]
+        #colnames(dataWindow) <- c("x", "y")
+        #aBeta <- calculate_spread(dataWindow)
+        aBetaPrice <- round(x[nextEndPoint,2] / x[nextEndPoint,1],5)
+        #aBeta <- rollingResultTimed[nextEndPoint,2]
+        #aSpread <- calculate_newSpread(xValue,yValue,aBeta)
+        rollingResultTimed[nextEndPoint,6] <- aBetaPrice
+        rollingResultTimed[nextEndPoint,7] <- aSpread
+        lastBetaPoint <- nextEndPoint
+      } else {
+        rollingResultTimed[nextEndPoint,6] <- aBetaPrice
+        rollingResultTimed[nextEndPoint,7] <- aSpread
+      }
+    } else {
+      lastBetaPoint <- nextEndPoint 
+    }
+
+  }
+  
+  
   
   #mktdataTimed <- xts (order.by = index(xIn))
   #rollingResultTimed <- merge(mktdataTimed, rollingResultTimed, all=FALSE, join = 'left')
@@ -150,53 +203,200 @@ rollingV2_1 <- function(x, width, FUN, PREFUN) {
 }
 
 
-# make an order sizing function
+# make a simple init long order sizing function
 #######################_ORDER SIZING FUNCTION_##################################
 # check to see which stock it is. If it's the second stock, reverse orderqty and 
 # orderside
-osSpreadMaxPos <- function (data, timestamp, orderqty, ordertype, orderside, 
+osInitLongPos <- function (data, timestamp, orderqty, ordertype, orderside, 
                             portfolio, symbol, ruletype, ..., orderprice) {
   portf <- getPortfolio(portfolio)
   #check to make sure pair slot has the things needed for this function
   if (!any(names(portf$pair) == "MaxPos") || !any(names(portf$pair) == "lvls")) 
     stop('pair must contain MaxPos and lvls')  
   
-  MaxPos <- portf$pair["MaxPos"]
+  if (portf$pair[symbol] == 1) {
+    qty <- 1000
+  } else {
+    qty <- 2000
+  }
+
+
+  orderside = 'long'
+  #if (qty > 0) orderside = 'long'
+  #if (qty < 0) orderside = 'long'
+  
+  #print(timestamp)
+  #print(qty)
+  # if (qty != 0 )
+  #   orderqty <- osMaxPos(data=data,timestamp=timestamp, orderqty=qty,
+  #                      ordertype=ordertype, orderside=orderside,
+  #                      portfolio=portfolio, symbol=symbol, ruletype=ruletype, 
+  #                      ...)
+  # else 
+  #   orderqty <- 0
+  orderqty <- qty
+  
+  #Add the order here instead of in the ruleSignal function
+  if (!is.null(orderqty) & !orderqty == 0 & !is.null(orderprice)) {
+    addOrder(portfolio=portfolio, symbol=symbol, 
+             timestamp=timestamp, qty=orderqty, price=as.numeric(orderprice), 
+             ordertype=ordertype, side=orderside, replace=FALSE,
+             status="open", ...=...)
+  }
+  return(0) #so that ruleSignal function doesn't also try to place an order
+}
+
+# make an order sizing function
+#######################_ORDER SIZING FUNCTION_##################################
+# check to see which stock it is. If it's the second stock, reverse orderqty and 
+# orderside
+osSpreadMaxPos <- function (data, timestamp, ordertype, orderside, 
+                            portfolio, symbol, ruletype, ..., orderprice, ordersidetype) {
+  #orderprice <- as.numeric(orderprice1[timestamp])
+  maxstock <- 5000
+  portf <- getPortfolio(portfolio)
+  #check to make sure pair slot has the things needed for this function
+  if (!any(names(portf$pair) == "MaxPos") || !any(names(portf$pair) == "lvls")) 
+    stop('pair must contain MaxPos and lvls')  
+  
+  maxPos <- portf$pair["MaxPos"]
   lvls <- portf$pair["lvls"]
+  transA <- portf$pair["transA"]
+  transB <- portf$pair["transB"]
+  transBInit <- portf$pair["transBInit"]
   beta <-  mktdata[,"Beta.SPREAD"]
   ratio <- as.numeric(coredata(beta[timestamp]))
   #print(ratio)
 
   qty <- 0
-  posStock1 <- getPosQty(portfolio, names(portf$pair[1]), timestamp)
-  posStock2 <- getPosQty(portfolio, names(portf$pair[2]), timestamp)
+  posStock <- getPosQty(portfolio, symbol, timestamp)
+  #posStock1 <- getPosQty(portfolio, names(portf$pair[1]), timestamp)
+  #posStock2 <- getPosQty(portfolio, names(portf$pair[2]), timestamp)
+  # aPosStock <- getPosLimit(portfolio, names(portf$pair[1]), timestamp)
+  # maxPosStock1 <- coredata(aPosStock$MaxPos)
+  # aPosStock <- getPosLimit(portfolio, names(portf$pair[2]), timestamp)
+  # maxPosStock2 <- coredata(aPosStock$MaxPos)
   
   
-  # PosLimit <- getPosLimit(portfolio, symbol, timestamp) 
-  # print(paste(timestamp, PosLimit))
-
-  #print(paste(timestamp, orderside, symbol))
-  if (orderside == "upperAdj") {
+  # Nx * Px + Ny * Py = maxPos
+  # Py = Px * r
+  # Opt1
+  # Nx * Px + Ny * Px * r = maxPos => Nx + Ny * r = maxPos / Px
+  # Nx = 1/2 * maxPos / Px, Ny = 1/2 * maxPos / (Px * r)
+  # Opt2
+  # Nx * Py / r + Ny * Py = maxPos => Nx/r + Ny = maxPos / Py
+  # Nx = 1/2 * maxPos * r / Py, Ny = 1/2 * maxPos / Py
+  if (ordersidetype == "initLong") {
     if (portf$pair[symbol] == 1) {
-        qty <- orderqty
+      #not yet init
+      #if (transA == 0) {
+        qty <- floor(0.5 * maxPos / orderprice )
+        qtyB <- floor(0.5 * maxPos / (orderprice * ratio))
+        .blotter[[paste('portfolio', qs.strategy, sep='.')]]$pair["transA"] <- qty
+        .blotter[[paste('portfolio', qs.strategy, sep='.')]]$pair["transB"] <- qtyB
+        .blotter[[paste('portfolio', qs.strategy, sep='.')]]$pair["transBInit"] <- qtyB
+        #portf$pair["lvls"] <- qtyB
+        # addPosLimit(portfolio = portfolio,
+        #             timestamp = timestamp,
+        #             symbol = names(portf$pair[1]),
+        #             maxpos = maxstock ,
+        #             longlevels = lvls,
+        #             minpos = -maxstock,
+        #             shortlevels = lvls)
+        # addPosLimit(portfolio = portfolio,
+        #     timestamp = timestamp,
+        #     symbol = names(portf$pair[2]),
+        #     maxpos = qtyB,
+        #     longlevels = lvls,
+        #     minpos = -qtyB,
+        #     shortlevels = lvls)
+      #} else { #already init
+      #  qty <- transA
+      #}
+      
     } else {
-        qty <- -floor(orderqty / ratio)
-        ## Comment out next line to use equal ordersizes for each stock.
-        # addPosLimit(
-        #   portfolio = portfolio,
+      #not yet init
+      #if (transBInit == 0) {
+      #  qtyA <- floor((0.5 * maxPos / orderprice ))
+      #  qty <- floor(0.5 * maxPos * ratio / orderprice)
+      #  .blotter[[paste('portfolio', qs.strategy, sep='.')]]$pair["transA"] <- qtyA
+      #  .blotter[[paste('portfolio', qs.strategy, sep='.')]]$pair["transB"] <- qty
+        #portf$pair["lvls"] <- qtyA
+        # addPosLimit(portfolio = portfolio,
         #   timestamp = timestamp,
-        #   symbol = symbol,
-        #   maxpos = floor(MaxPos / ratio),
+        #   symbol = names(portf$pair[1]),
+        #   maxpos = qtyA,
         #   longlevels = lvls,
-        #   minpos = floor(-MaxPos / ratio),
-        #   shortlevels = lvls
-        #)
+        #   minpos = -qtyA,
+        #   shortlevels = lvls)
+        # addPosLimit(portfolio = portfolio,
+        #             timestamp = timestamp,
+        #             symbol = names(portf$pair[2]),
+        #             maxpos = maxstock ,
+        #             longlevels = lvls,
+        #             minpos = -maxstock,
+        #             shortlevels = lvls)
+      #} else { #already init
+        qty <- transBInit
+      #}
     }
-  } else if (orderside == "lowerAdj") {
-    if (portf$pair[symbol] == 1) {
-        qty <- -orderqty
-    } else {
-        qty <- floor(orderqty / ratio)
+    
+  } else {
+
+    # currentQty <- floor(0.5 * maxPos)
+    # transCheck <- abs(trans)
+    # if (transCheck > 0) {
+    #   for (i in 1:transCheck) {
+    #     currentQty <- floor ( currentQty * (1- 1/lvls))
+    #   }
+    #   #we buy back if current qty not aligned
+    #   currentQty <- floor(currentQty / orderprice)
+    #   buyBackQty <- currentQty - posStock
+    # } else {
+    #   currentQty <- floor(currentQty / orderprice)
+    #   buyBackQty <- currentQty - posStock
+    # }
+    
+    if (ordersidetype == "upperAdj") {
+      if (portf$pair[symbol] == 1) {
+        #qty <- floor(currentQty / lvls) + buyBackQty
+        #trans <- trans + 1
+        #calcuate value based on the other side
+        qtyB <- floor(transB / lvls)
+        # if (abs(qtyB) >= trans)
+        #   qtyB <- trans
+        qty <- floor(transB / lvls * ratio)
+        #.blotter[[paste('portfolio', qs.strategy, sep='.')]]$pair["transA"] <- transA + qtyA
+        .blotter[[paste('portfolio', qs.strategy, sep='.')]]$pair["transB"] <- transB - qtyB
+      } else {
+        # qty <- -floor(currentQty / lvls) + buyBackQty
+        # trans <- trans - 1
+        qty <- -floor(posStock / lvls)
+        # if (abs(qty) >= posStock)
+        #   qty <- -posStock
+        #estimate the other stock
+        qtyA <- floor(posStock / lvls * ratio)
+        qtyA <- transA + qtyA
+        .blotter[[paste('portfolio', qs.strategy, sep='.')]]$pair["transA"] <- qtyA
+      }  
+    } else if (ordersidetype == "lowerAdj") {    
+      if (portf$pair[symbol] == 1) {
+        # qty <- -floor(currentQty / lvls) + buyBackQty
+        # trans <- trans - 1
+        qty <- -floor(posStock / lvls)
+        #estimate the other stock
+        qtyB <- floor(posStock / lvls / ratio)
+        qtyB <- transB + qtyB
+        .blotter[[paste('portfolio', qs.strategy, sep='.')]]$pair["transB"] <- qtyB
+
+      } else {
+        # qty <- floor(currentQty / lvls) + buyBackQty
+        # trans <- trans + 1
+        qtyA <- floor(transA / lvls)
+        # if (abs(qtyB) >= trans)
+        #   qtyB <- trans
+        qty <- floor(transA / lvls / ratio)
+        .blotter[[paste('portfolio', qs.strategy, sep='.')]]$pair["transA"] <- transA - qtyA
         ## Comment out next line to use equal ordersizes for each stock.
         # addPosLimit(
         #   portfolio = portfolio,
@@ -207,35 +407,39 @@ osSpreadMaxPos <- function (data, timestamp, orderqty, ordertype, orderside,
         #   minpos = 0,
         #   shortlevels = lvls
         # ) 
+      }
+    }else {
+      qty <- 0
     }
-  } else {
-    qty <- 0
   }
-  
+
+
+
 
   
-  orderside = 'long'
+  #orderside = 'long'
   #if (qty > 0) orderside = 'long'
   #if (qty < 0) orderside = 'long'
   
   #print(timestamp)
   #print(qty)
-  if (qty != 0 )
-    orderqty <- osMaxPos(data=data,timestamp=timestamp, orderqty=qty,
-                       ordertype=ordertype, orderside=orderside,
-                       portfolio=portfolio, symbol=symbol, ruletype=ruletype, 
-                       ...)
-  else 
-    orderqty <- 0
+  # if (qty != 0 )
+  #   orderqty <- osMaxPos(data=data,timestamp=timestamp, orderqty=qty,
+  #                      ordertype=ordertype, orderside=orderside,
+  #                      portfolio=portfolio, symbol=symbol, ruletype=ruletype,
+  #                      ...)
+  # else
+  #   orderqty <- 0
+  orderqty <- qty
   
   #Add the order here instead of in the ruleSignal function
-  if (!is.null(orderqty) & !orderqty == 0 & !is.null(orderprice)) {
-    addOrder(portfolio=portfolio, symbol=symbol, 
-             timestamp=timestamp, qty=orderqty, price=as.numeric(orderprice), 
-             ordertype=ordertype, side=orderside, replace=FALSE,
-             status="open", ...=...)
-  }
-  return(0) #so that ruleSignal function doesn't also try to place an order
+  # if (!is.null(orderqty) & !orderqty == 0 & !is.null(orderprice)) {
+  #   addOrder(portfolio=portfolio, symbol=symbol, 
+  #            timestamp=timestamp, qty=orderqty, price=as.numeric(orderprice), 
+  #            ordertype=ordertype, side=orderside, replace=FALSE,
+  #            status="open", ...=...)
+  # }
+  return(orderqty) #so that ruleSignal function doesn't also try to place an order
 }
 
 ################################################################################
@@ -282,6 +486,12 @@ get.longTime <- function(mktdata, date) {
 }
 
 
+takeTranxFee <- function(TxnQty, TxnPrice, Symbol,...) {
+  
+  aFee <- abs(TxnQty) * TxnPrice * -0.005
+  return (aFee)
+}
+
 
 ################# Main 
 stock.output <- 'C:/important/ideas/stock/projects/model1/testResult/testRel/'
@@ -290,10 +500,10 @@ stock.output <- 'C:/important/ideas/stock/projects/model1/testResult/testRel/'
 start_date2 <- "2012-01-01"
 end_date2 <- "2014-12-31"
 
-#stock_daily <- loadDailyClose(start_date=start_date2, end_date=end_date2, symbList = c("SH600391" ,"SZ000738"))
-stock_daily <- loadDailyClose(start_date=start_date2, end_date=end_date2, symbList = c("SH601169" ,"SH601328"))
+# #stock_daily <- loadDailyClose(start_date=start_date2, end_date=end_date2, symbList = c("SH600391" ,"SZ000738"))
+#stock_daily <- loadDailyClose(start_date=start_date2, end_date=end_date2, symbList = c("SH601169" ,"SH601328"))
 #yy <-rollingV2_1(x=stock_daily, width=10, FUN=calculate_spread, PREFUN=calcuateSimpleReturn)
-yy <-rollingV2_1(x=stock_daily, width=10, FUN=calculate_spread, PREFUN=calcuateAbsPrice)
+#yy <-rollingV2_1(x=stock_daily, width=10, FUN=calculate_spread, PREFUN=calcuateAbsPrice)
 
 
 #betaZZ <- cumsum(na.omit(yy$Beta))
