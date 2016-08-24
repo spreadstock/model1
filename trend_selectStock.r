@@ -27,8 +27,9 @@ isGainRuleLastDays<- function(stock, latestDay=10)
   if(result[nrow(result),1] > 0 && isGainRateOverSlip(last,0.5)) { return (TRUE) } else { return (FALSE) }
 }
 
-#最近三天交易量都比前一天的大并且总交易量比前三天的总交易量高一倍以上
-isGainolumeRuleLastDays<- function(stock, latestDay=3)
+#################################################################
+#最近三天交易量都比前一天的大并且总交易量比前三天的总交易量高1.2/1.5倍以上
+isGainolumeRuleLastDays<- function(stock, latestDay=3, multipler=1.8)
 {
   #最近三天交易量都比前一天的大
   last <- last(Vo(stock),latestDay+1)
@@ -42,13 +43,18 @@ isGainolumeRuleLastDays<- function(stock, latestDay=3)
   #总交易量比前三天的总交易量高一倍以上
   last3 <- last(Vo(stock),latestDay)
   last6 = stock[(nrow(stock)-2*latestDay+1):(nrow(stock)-latestDay)]
-  if(sum(last3)/sum(last6) < 2) { return (FALSE) }
+  if(sum(last3)/sum(last6) < multipler) { return (FALSE) }
   return (TRUE)
 }
 
+#################################################################
 #短期均线（5,10,20）在年线以上250.
 isShorternMAOverLongTermMARule<- function(stock, latestDay=1)
 {
+  if(nrow(stock) < 251)
+  {
+    return (FALSE)
+  }
   MA<-Cl(stock)
   MA$SMA250 <- SMA(Cl(stock),250)
   MA$SMA5 <- SMA(Cl(stock),5)
@@ -68,6 +74,7 @@ isShorternMAOverLongTermMARule<- function(stock, latestDay=1)
   return (TRUE)
 }
 
+#################################################################
 #最近的一个低点（5天以内）比上一次的低点要高。
 isLowestPointRule<- function(stock, backDate=5)
 {
@@ -79,23 +86,54 @@ isLowestPointRule<- function(stock, backDate=5)
 }
 
 
-getTrendMatchStocks <- function(stock.name.list){
-  result <- list(NA)
-  for(stock in multiStocks) {
+getTrendMatchStocks <- function(stock.folder){
+stock_symbols  <- listStocksFromDir(stock.folder)
+result <- list(NA)
+for(symbol in stock_symbols) 
+{ 
+  print(symbol)
+  stock <-  loadStock(stock.folder, symbol, operation.name="all")
+  if( nrow(stock) > 10 ) {  
     if(isGainRuleLastDays(stock)
        && isGainolumeRuleLastDays(stock)
        && isShorternMAOverLongTermMARule(stock)
        && isLowestPointRule(stock)) { 
-      result <- list(result, stock)
-    }
-  }
+      result <- c(result, symbol)
+    }    
+  rm(stock) }
+}
   return (result[-1])  
 }
 
-stock.folder <- 'C:/Users/exubixu/Desktop/new1/'
-stock_symbols <- listStocksFromDir(stock.folder)
-multiStocks <- loadMultipleStockList(stock.folder, stock_symbols, operation.name = "all")
 
-getTrendMatchStocks(multiStocks)
+getPrintMatchStocks <- function(stock.folder){
+  stock_symbols  <- listStocksFromDir(stock.folder)
+  result <- list(NA)
+  printResult <- list(NA)
+  for(symbol in stock_symbols) 
+  { 
+    stock <-  loadStock(stock.folder, symbol, operation.name="all")
+    if( nrow(stock) > 10 ) {  
+      isGainRule <- isGainRuleLastDays(stock)
+      isGainolume <- isGainolumeRuleLastDays(stock)
+      isShorternMA <- isShorternMAOverLongTermMARule(stock)
+      isLowestPointRule <- isLowestPointRule(stock)
+      printResult <- c(printResult, list(paste(symbol, isGainRule, isGainolume, isShorternMA, isLowestPointRule, "\n", sep=",")))
+      if(isGainRule
+         && isGainolume
+         && isShorternMA
+         && isLowestPointRule) { 
+        result <- list(result, symbol)
+      }    
+      rm(stock) }
+  }
+  return (printResult[-1])  
+} 
 
+source.folder <- 'C:/Users/exubixu/Desktop/Imp/git_new/model1/'
+source(paste0(source.folder,"commonPackages.r"))
+#stock.folder <- 'C:/Users/exubixu/Desktop/new1/'
+stock.folder <- 'C:/Users/exubixu/Desktop/Imp/git_new/model1/StockDatas/2016-08-09-Later_Rehabilitation_Cleaned/'
+#write.csv(x=mySelected, file="C:/Users/exubixu/Desktop/new1/test.csv", row.names = TRUE)
+mySelected <- getTrendMatchStocks(stock.folder)
 
