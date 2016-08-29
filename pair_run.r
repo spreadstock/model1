@@ -1,4 +1,5 @@
 
+#qs.strategy <- "multitrend"
 qs.strategy <- "qsModel1"
 out1 <-applyStrategy(strategy=qs.strategy,portfolios=qs.strategy)
 updatePortf(Portfolio=qs.strategy,

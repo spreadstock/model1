@@ -124,8 +124,9 @@ calcuateAbsPrice <- function(x)
 calcuateSimpleReturn <- function(x)
 {
   dx <- na.omit(x)
-  dx<-diff(x) / x[-length(x)]
-  dx <- na.omit(dx)
+  dx<-diff(x) / lag(x)
+  #dx <- na.omit(dx)
+
   return (dx)
 }
 
@@ -247,4 +248,9 @@ cointegrationTest <- function(stockData)
   return (ht$p.value)
 }
 
+takeTranxFee <- function(TxnQty, TxnPrice, Symbol,...) {
+  
+  aFee <- abs(TxnQty) * TxnPrice * -0.005
+  return (aFee)
+}
 

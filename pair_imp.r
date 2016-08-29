@@ -1,3 +1,5 @@
+
+
 calculate_spread <- function(x) {
   
 
@@ -41,8 +43,75 @@ calculate_newSpread <- function(xValue,yValue,beta) {
 #   return (xx)
 # }
 
+calculate_betaV2 <- function(dx, width) {
+  colnames(dx) <- c("x","y")
+  beta <-rollapply(dx, width=width, FUN=calculate_spread, by.column=FALSE, align="right")
+  return (beta)
+}
 
-calculate_totalbeta <- function(x, threshold) {
+calculate_totalbetaV4 <- function(x, dx) {
+  lastPoint <- 1
+  returns <-calcuateSimpleReturn(dx)
+  returnBeta <- calculate_betaV2(returns, 10)
+  xx <- cbind(x, returnBeta)
+  xx[1,2] <- NA
+  num <- nrow(xx)
+  for (aItem in 2:num) {
+    if (is.na(xx[lastPoint,3])) {
+      xx[aItem,2] <- NA
+    } else {
+      spread <- round(returns[aItem,2] - returns[aItem,1] * coredata(xx[lastPoint,3]), 5)
+      xx[aItem,2] <- spread
+    }
+    lastPoint <- aItem
+    
+  }
+  return (xx)
+}
+
+calculate_totalbetaV3 <- function(x, dx) {
+  lastPoint <- 1
+  xx <- x
+  xx[1,2] <- NA
+  num <- nrow(xx)
+  for (aItem in 2:num) {
+    if (is.na(xx[lastPoint,1])) {
+      xx[aItem,2] <- NA
+    } else {
+      spread <- round(dx[aItem,2] - dx[aItem,1] * coredata(xx[lastPoint,1]), 5)
+      xx[aItem,2] <- spread
+    }
+    lastPoint <- aItem
+
+  }
+  return (xx)
+}
+
+calculate_totalbetaV2 <- function(x, threshold, dx) {
+  lastPoint <- 1
+  xx <- x
+  xx[1,2] <- NA
+  num <- nrow(xx)
+  checkPoint1 <- threshold
+  checkPoint2 <- -threshold
+  for (aItem in 2:num) {
+    if (is.na(xx[lastPoint,1])) {
+      xx[aItem,2] <- NA
+      lastPoint <- aItem
+    } else {
+      spread <- round(dx[aItem,2] - dx[aItem,1] * coredata(xx[lastPoint,1]), 5)
+      xx[aItem,2] <- spread
+      if ((spread > checkPoint1) | (spread < checkPoint2) ) {
+        lastPoint <- aItem
+      }     
+    }
+
+    
+  }
+  return (xx)
+}
+
+calculate_totalbeta <- function(x, threshold, dx) {
     lastPoint <- 1
     xx <- na.fill(x,0)
     num <- nrow(xx)
@@ -54,6 +123,8 @@ calculate_totalbeta <- function(x, threshold) {
       if ((aValue > checkPoint1) | (aValue < checkPoint2) ) {
         lastPoint <- aItem
       }
+      #spread <- round(dx[aItem,2] - dx[aItem,1] * coredata(xx[lastPoint,1]), 5)
+      #xx[aItem,3] <- spread
     }
     return (xx)
 }
@@ -68,13 +139,27 @@ calculate_betaPrice <- function(x) {
 
 calculate_beta <- function(x) {
 
+  lookBack <- 30
   dx <- na.omit(x)
   beta<-round(dx[,2] / dx[,1],5)
+  #beta <- calculate_betaV2(dx,10)
   #beta <- lag(beta,1) #no need lag, because the platform already delay 1 day
-  beta_total <- calculate_totalbeta(cbind(beta, 0), 0.015)
-  beta <- cbind(beta_total, 0.015, -0.015)
+  #beta_total <- calculate_totalbeta(cbind(beta, 0), 0.015,dx)
+  #beta_total <- calculate_totalbeta(cbind(beta, 0), 0.075,dx)#for another pair
+  #beta_total <- calculate_totalbetaV2(cbind(beta, 0), 0.075,dx)
+  #beta_total <- calculate_totalbetaV3(cbind(beta, 0),dx)
+  beta_total <- calculate_totalbetaV4(cbind(beta, 0),dx)
 
-  colnames(beta) <- c("Beta","BetaTotal","Upper", "Lower")
+  movingAvg = calcuateSMA(beta_total[,2],lookBack) #Moving average
+  movingStd = runSD(beta_total[,2],lookBack, sample=FALSE) #Moving standard deviation / bollinger bands
+  spreadUpper <- movingAvg + 2.5 * movingStd
+  spreadLower <- movingAvg - 2.5 * movingStd
+  #beta <- cbind(beta_total, 0.015, -0.015)
+  #beta <- cbind(beta_total, 0.075, -0.075) #for another pair
+  beta <- cbind(beta_total, spreadUpper, spreadLower)
+
+  #colnames(beta) <- c("Beta","BetaTotal","Upper", "Lower")
+  colnames(beta) <- c("Beta","BetaTotal","BetaReturn", "Upper", "Lower")
   return (beta) 
 }
 
@@ -442,6 +527,84 @@ osSpreadMaxPos <- function (data, timestamp, ordertype, orderside,
   return(orderqty) #so that ruleSignal function doesn't also try to place an order
 }
 
+
+osSpreadForTrend <- function (data, timestamp, ordertype, orderside, 
+                            portfolio, symbol, ruletype, ..., orderprice, ordersidetype) {
+  portf <- getPortfolio(portfolio)
+
+  lvls <- getPairLvls(portf, symbol)
+  thePair <- as.vector(getPaired(symbol))
+  if (is.null(thePair))
+    return (0)
+
+  pairLocation <- which(thePair, symbol)
+  transA <- getPairPosition(portf, symbol)
+  transB <- getPairPosition(portf, symOther)
+  beta <-  mktdata[,"Beta.SPREAD"]
+  ratio <- as.numeric(coredata(beta[timestamp]))
+  #print(ratio)
+  
+  if (ordersidetype == "initLong") {
+    if (pairLocation == 1) {
+      if (transA != 0) {
+        qtyA <- transA
+      } else {
+        qtyA <- floor(0.5 * 35000 / orderprice )
+        qtyB <- floor(0.5 * 35000 / (orderprice * ratio))
+        setPairPosition(portf,thePair[1],qtyA )
+        setPairPosition(portf,thePair[2],qtyB )
+      }
+      qty <- qtyA
+      
+    } else {
+      if (transB != 0) {
+        qtyB <- transB
+      } else {
+        qtyA <- floor(0.5 * 35000 / orderprice )
+        qtyB <- floor(0.5 * 35000 / (orderprice * ratio))
+        setPairPosition(portf,thePair[1],qtyA )
+        setPairPosition(portf,thePair[2],qtyB )
+      }
+      qty <- qtyB
+    } 
+  } else {
+    if (transA == 0 | transB == 0)
+      return (0)
+    
+    qty <- 0
+    #posStock <- getPosQty(portfolio, symbol, timestamp)
+    
+    if (ordersidetype == "upperAdj") {
+      qtyB <- floor(transB / lvls)
+      qtyA <- floor(transB / lvls * ratio)
+      setPairPosition(portf,thePair[1],transA + qtyA )
+      setPairPosition(portf,thePair[2],transB - qtyB )
+      if (pairLocation == 1) {
+        qty <- qtyA
+      } else {
+        qty <- -qtyB
+      }  
+    } else if (ordersidetype == "lowerAdj") {   
+      qtyA <- floor(transB / lvls)
+      qtyB <- floor(transB / lvls / ratio)
+      setPairPosition(portf,thePair[1],transA - qtyA )
+      setPairPosition(portf,thePair[2],transB + qtyB )
+      if (pairLocation == 1) {
+        qty <- -qtyA
+      } else {
+        qty <- qtyB
+      }
+    }else {
+      qty <- 0
+    }    
+  }
+  
+
+
+  orderqty <- qty
+  return(orderqty) 
+}
+
 ################################################################################
 # custom indicator function for monthly SMA                                    #
 ################################################################################
@@ -485,6 +648,23 @@ get.longTime <- function(mktdata, date) {
   return(longResultTimed)
 }
 
+################################################################################
+# custom indicator function for monthly SMA                                    #
+################################################################################
+initlongTime <- function(mktdata) {
+  
+  timeList <- index(mktdata)
+  longTime <- rep(0, nrow(mktdata))
+  longTime[1] <- 1
+  longStart <- rep(1, nrow(mktdata))
+  longStart[1] <- 0
+  longResult <- cbind(longTime,longStart, 1)
+  colnames(longResult) <- c("LongTime","LongStart" ,"LongCondition")
+  longResultTimed <- xts(x=longResult, order.by=timeList)
+  
+  return(longResultTimed)
+}
+
 
 takeTranxFee <- function(TxnQty, TxnPrice, Symbol,...) {
   
@@ -502,9 +682,10 @@ end_date2 <- "2014-12-31"
 
 # #stock_daily <- loadDailyClose(start_date=start_date2, end_date=end_date2, symbList = c("SH600391" ,"SZ000738"))
 #stock_daily <- loadDailyClose(start_date=start_date2, end_date=end_date2, symbList = c("SH601169" ,"SH601328"))
+stock_daily <- loadDailyClose(start_date=start_date2, end_date=end_date2, symbList = c("SH600298" ,"SZ002123"))
 #yy <-rollingV2_1(x=stock_daily, width=10, FUN=calculate_spread, PREFUN=calcuateSimpleReturn)
 #yy <-rollingV2_1(x=stock_daily, width=10, FUN=calculate_spread, PREFUN=calcuateAbsPrice)
-
+yy<- calculate_beta(stock_daily)
 
 #betaZZ <- cumsum(na.omit(yy$Beta))
 #betaZZ <- yy$Beta / betaZZ

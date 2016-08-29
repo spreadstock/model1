@@ -20,11 +20,17 @@ lvls <- 2 #how many times to fade; Each order's qty will = MaxPos/lvls
 
 stock.folder.daily <- 'C:/important/ideas/stock/projects/model1/StockDatas/2016-08-09-Later_Rehabilitation_Cleaned/'
 symbList = c("SH601169" ,"SH601328")
+#symbList = c("SH600298" ,"SZ002123")
 
-SH601169 <- subsetByDateRange(loadStock(stock.folder.daily, stock.name= symbList[1], operation.name="All"),startDate, endDate) 
-SH601328 <- subsetByDateRange(loadStock(stock.folder.daily, stock.name= symbList[2], operation.name="All"),startDate, endDate) 
-stock_daily <- SH601169
-stock_daily <-cbind(stock_daily, SH601328)
+for(symbol in symbList) 
+{ 
+  a  <-   subsetByDateRange(loadStock(stock.folder.daily, symbol, operation.name="all"),startDate, endDate)
+  assign(symbol,a)
+  rm(a)
+}
+
+stock_daily <- get(symbList[1])
+stock_daily <-cbind(stock_daily, get(symbList[2]))
 
 
 for(symbol in symbList) 
@@ -223,7 +229,7 @@ add.signal(
   name = "sigFormula",
   arguments = list(
     columns = c(
-      "Spread.cross.upper",
+      "Spread.cross.lower",
       "Stock_LongStartTime"
     ),
     formula = "((Spread.cross.lower == 1) & (Stock_LongStartTime  == 1))",
