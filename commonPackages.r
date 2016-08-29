@@ -28,7 +28,9 @@ writeStock <- function(x, stock.folder="", ouput.name, isZoo=FALSE)
 loadStock <- function(stock.folder, stock.name, operation.name = "Cl")
 {
   tmp <- read.csv(paste(stock.folder, stock.name, '.txt', sep=''), sep=',', check.names=FALSE)
+  tmpCol <- colnames(tmp)
   stock1  <- xts(tmp[,-1],as.Date(tmp[,1],"%Y/%m/%d"))
+  colnames(stock1) <- tmpCol[-1]
   if (operation.name == "Op") {
     return (Op(stock1))
   } else if (operation.name == "Hi") {
@@ -122,8 +124,9 @@ calcuateAbsPrice <- function(x)
 calcuateSimpleReturn <- function(x)
 {
   dx <- na.omit(x)
-  dx<-diff(x) / x[-length(x)]
-  dx <- na.omit(dx)
+  dx<-diff(x) / lag(x)
+  #dx <- na.omit(dx)
+
   return (dx)
 }
 
@@ -245,4 +248,9 @@ cointegrationTest <- function(stockData)
   return (ht$p.value)
 }
 
+takeTranxFee <- function(TxnQty, TxnPrice, Symbol,...) {
+  
+  aFee <- abs(TxnQty) * TxnPrice * -0.005
+  return (aFee)
+}
 

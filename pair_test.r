@@ -13,10 +13,10 @@ startDate <- '2012-01-02'
 endDate <- '2014-09-30'
 initEq <- 1e5
 
-MaxPos <- 1000  #max position in stockA; 
+MaxPos <- 35000  #max position in stockA; 
 # max position in stock B will be max * ratio, i.e. no hard position limit in 
 # Stock B
-lvls <- 4 #how many times to fade; Each order's qty will = MaxPos/lvls
+lvls <- 2 #how many times to fade; Each order's qty will = MaxPos/lvls
 
 stock.folder.daily <- 'C:/important/ideas/stock/projects/model1/StockDatas/2016-08-09-Later_Rehabilitation_Cleaned/'
 symbList = c("SH601169" ,"SH601328")
@@ -35,6 +35,7 @@ for(symbol in symbList)
 
 
 qs.strategy <- "qsModel1"
+rm.strat(qs.strategy)
 initPortf(qs.strategy, symbols=symbList, initDate = initDate)
 initAcct(
   qs.strategy,
@@ -50,16 +51,16 @@ initOrders(portfolio = qs.strategy, initDate = initDate)
 # osFUN will need to know which symbol is leg 1 and which is leg 2 as well as 
 # what the values are for MaxPos and lvls.  So, create a slot in portfolio to 
 # hold this info.
-pair <- c(1,2 , MaxPos, lvls)
-names(pair) <- c(symbList[1], symbList[2], "MaxPos", "lvls")
+pair <- c(1,2 , MaxPos, lvls,0,0,0)
+names(pair) <- c(symbList[1], symbList[2], "MaxPos", "lvls","transA","transB","transBInit")
 .blotter[[paste('portfolio', qs.strategy, sep='.')]]$pair <- pair
 
 # Create initial position limits and levels by symbol
 # allow 3 entries for long and short if lvls=3.
-addPosLimit(portfolio=qs.strategy, timestamp=initDate, symbol=symbList[1], 
-            maxpos=MaxPos, longlevels=lvls, minpos=-MaxPos, shortlevels=lvls)
-addPosLimit(portfolio=qs.strategy, timestamp=initDate, symbol=symbList[2], 
-            maxpos=MaxPos * 2, longlevels=lvls, minpos=-MaxPos, shortlevels=lvls)
+# addPosLimit(portfolio=qs.strategy, timestamp=initDate, symbol=symbList[1],
+#             maxpos=0, longlevels=lvls, minpos=0, shortlevels=lvls)
+# addPosLimit(portfolio=qs.strategy, timestamp=initDate, symbol=symbList[2],
+#             maxpos=0, longlevels=lvls, minpos=0, shortlevels=lvls)
 
 strategy(qs.strategy, store = TRUE)
 
@@ -99,6 +100,16 @@ add.indicator(
     FUN=calculate_spread,
     PREFUN=calcuateAbsPrice),
     label = "SPREAD"
+)
+
+add.indicator(
+  strategy = qs.strategy,
+  name = "get.longTime",
+  arguments = list(
+    mktdata = quote(Cl(mktdata)),
+    date = "2012-12-03"
+  ),
+  label = "LONGTIME"
 )
 
 
@@ -143,96 +154,89 @@ add.signal(
 add.signal(
   qs.strategy,
   name = "sigCrossover",
-  arguments = list(columns = c("Spread.SPREAD", "Upper.SPREAD"), relationship = "gt"),
+  arguments = list(columns = c("Sprea.SPREAD", "Upper.SPREAD"), relationship = "gt"),
   label = "Spread.cross.upper"
 )
 
 add.signal(
   qs.strategy,
   name = "sigCrossover",
-  arguments = list(columns = c("Spread.SPREAD", "Lower.SPREAD"), relationship = "lt"),
+  arguments = list(columns = c("Sprea.SPREAD", "Lower.SPREAD"), relationship = "lt"),
   label = "Spread.cross.lower"
 )
 
+add.signal(
+  qs.strategy,
+  name = "sigComparison",
+  arguments = list(columns = c("LongTime.LONGTIME", "LongCondition.LONGTIME"), relationship = "eq"),
+  label = "Stock_LongTime"
+)
+
+add.signal(
+  qs.strategy,
+  name = "sigComparison",
+  arguments = list(columns = c("LongStart.LONGTIME", "LongCondition.LONGTIME"), relationship = "eq"),
+  label = "Stock_LongStartTime"
+)
 
 
+add.signal(
+  qs.strategy,
+  name = "sigFormula",
+  arguments = list(
+    columns = c(
+      "StockMCl.gt.SMA",
+      "Stock_LongTime",
+      "Stock_LongStartTime"
+    ),
+    formula = "(((StockMCl.gt.SMA == 1) | (Stock_LongTime  == 1)) & (Stock_LongStartTime == 0))",
+    cross = FALSE
+  ),
+  label = "Stock.longEnter"
+)
 
-# add.signal(
-#   qs.strategy,
-#   name = "sigCrossover",
-#   arguments = list(columns = c("Spread.SPREAD", "Mean.SPREAD"), relationship = "lt"),
-#   label = "Spread.lt.middle"
-# )
-# 
-# add.signal(
-#   qs.strategy,
-#   name = "sigCrossover",
-#   arguments = list(columns = c("Spread.SPREAD", "Mean.SPREAD"), relationship = "gt"),
-#   label = "Spread.gt.middle"
-# )
+add.signal(
+  qs.strategy,
+  name = "sigFormula",
+  arguments = list(
+    columns = c(
+      "Spread.cross.upper",
+      "Stock_LongStartTime"
+    ),
+    formula = "((Spread.cross.upper == 1) & (Stock_LongStartTime  == 1))",
+    cross = FALSE
+  ),
+  label = "Stock.upperAdj"
+)
 
-#combine Signals
-# add.signal(
-#   qs.strategy,
-#   name = "sigFormula",
-#   arguments = list(
-#     columns = c(
-#       "StockMCl.gt.SMA"
-#     ),
-#     formula = "(StockMCl.gt.SMA == 1)",
-#     cross = FALSE
-#   ),
-#   label = "Stock.longEntry"
-# )
-
-# 
-# add.signal(
-#   qs.strategy,
-#   name = "sigFormula",
-#   arguments = list(
-#     columns = c(
-#       "StockCl.gt.SMA",
-#       "Spread.cross.lower"
-#       
-#     ),
-#     formula = "(StockCl.gt.SMA == 1) & (Spread.cross.lower == 1)",
-#     cross = FALSE
-#   ),
-#   label = "Stock.lowerAdjSell"
-# )
-
-# add.signal(
-#   qs.strategy,
-#   name = "sigFormula",
-#   arguments = list(
-#     columns = c(
-#       "StockMCl.lt.SMA",
-#       "Spread.lt.middle",
-#       "Spread.gt.middle"
-#     ),
-#     formula = "((StockMCl.lt.SMA == 1) & ((Spread.lt.middle == 1) | (Spread.gt.middle  == 1)))",
-#     cross = FALSE
-#   ),
-#   label = "Stock.longExit"
-# )
-
-
+add.signal(
+  qs.strategy,
+  name = "sigFormula",
+  arguments = list(
+    columns = c(
+      "Spread.cross.upper",
+      "Stock_LongStartTime"
+    ),
+    formula = "((Spread.cross.lower == 1) & (Stock_LongStartTime  == 1))",
+    cross = FALSE
+  ),
+  label = "Stock.lowerAdj"
+)
 
 # #add rules
 add.rule(
   qs.strategy,
   name = 'ruleSignal',
   arguments = list(
-    sigcol = "StockMCl.gt.SMA",
+    sigcol = "Stock.longEnter",
     sigval = TRUE,
-    orderqty = 2000,
+    orderqty = 1000,
     ordertype = 'market',
-    orderside = NULL,
-    osFUN = 'osMaxPos'
+    orderside = 'initLong',
+    osFUN = 'osSpreadMaxPos'
   ),
   type = 'enter'
 )
-
 
 # add.rule(
 #   qs.strategy,
@@ -251,27 +255,14 @@ add.rule(
 
 #adjustment by spread
 
-# add.rule(
-#   qs.strategy,
-#   name = 'ruleSignal',
-#   arguments = list(
-#     sigcol = "Stock.lowerAdjSell",
-#     sigval = TRUE,
-#     orderqty = 200,
-#     ordertype = 'market',
-#     orderside = 'lowerAdjSell',
-#     osFUN = 'osSpreadMaxPos'
-#   ),
-#   type = 'enter'
-# )
 
 add.rule(
   qs.strategy,
   name = 'ruleSignal',
   arguments = list(
-    sigcol = "Spread.cross.upper",
+    sigcol = "Stock.upperAdj",
     sigval = TRUE,
-    orderqty = 200,
+    orderqty = 5000,
     ordertype = 'market',
     orderside = 'upperAdj',
     osFUN = 'osSpreadMaxPos'
@@ -283,9 +274,9 @@ add.rule(
   qs.strategy,
   name = 'ruleSignal',
   arguments = list(
-    sigcol = "Spread.cross.lower",
+    sigcol = "Stock.lowerAdj",
     sigval = TRUE,
-    orderqty = 200,
+    orderqty = 5000,
     ordertype = 'market',
     orderside = 'lowerAdj',
     osFUN = 'osSpreadMaxPos'
