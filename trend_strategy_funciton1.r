@@ -132,24 +132,17 @@ isTrendOneUpCamel <- function(x ,targetShortGrowDay=2, targetDiffGrowDay=3, targ
   
 
 #加仓，当上涨0.5个ATR并且还持有股票的时候，就增加ATR follow的买入信号
-growCertainATRIndex <- function(x, index, ATRRate=0.5) 
+growCertainATRIndex <- function(x, index, closeTnxPrice, atrTnxPrice, ATRRate=0.5) 
 {	
-	closeTnxPrice <- Cl(x[index])
-	atrTnxPrice <- x[index]$atr
-	for (i in index+1:nrow(x))
+	aaa <- strsplit(colnames(x)[1],"[.]")
+	symbol <- aaa[[1]][1]
+	for (i in (index+1):nrow(x))
     {
-	   if((as.numeric(Cl(x[index])) - as.numeric(closeTnxPrice)) >= (ATRRate * as.numeric(atrTnxPrice)))
+	   diff <-(as.numeric(x[i]) - closeTnxPrice)
+	   if( diff >= atrTnxPrice)
 	   {
-	        year <- .indexyear(x[i]) + 1900
-            mon <- .indexmon(x[i]) +1
-            day <- .indexmday(x[i])
-			timestamp <- paste(year, mon, day,sep="-")
-			print(paste("xubin result", timestamp,sep=":"))
-			symbol <- strsplit(colnames(x)[1],"[.]")
-			pos <- getPosQty(multi.trend, symbol, timestamp)
-			if(pos > 0)
-			  return (i)
-	   }
+             return (i)
+       }
     }
 	return (0)
 }
@@ -161,7 +154,11 @@ findGrowATRSig <- function(x, index, ATRRate=0.5)
 	 #if(x[index]$longEntry == 1) 
 	 {
 	     tnxIndex <- index+1
-		 return (growCertainATRIndex(x,tnxIndex))
+
+		 closeTnxPrice <- as.numeric(Cl(x[index]))
+         atrTnxPrice <- (ATRRate * as.numeric(x[index]$atr))
+		 return (growCertainATRIndex(Cl(x),index=tnxIndex,closeTnxPrice=closeTnxPrice,atrTnxPrice=atrTnxPrice))
+
 	 }
 	 else
 	 {

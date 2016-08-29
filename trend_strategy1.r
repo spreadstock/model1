@@ -19,6 +19,7 @@ source(paste0(source.folder,"commonPackages.r"))
 symbols <- listStocksFromDir(stock.folder)
 for(symbol in symbols) 
 { 
+  stock(symbol, currency='USD',multiplier=1)
   a  <-  loadStock(stock.folder, symbol, operation.name="all") 
   a$SMAShort <- SMA(Cl(a),shortSMA)
   a$SMAMid <- SMA(Cl(a),middleSMA)
@@ -30,7 +31,7 @@ for(symbol in symbols)
 }
 
 
-stock(symbols, currency='USD',multiplier=1)
+
 rm.strat(qs.strategy)
 rm.strat(multi.trend)
 initPortf(multi.trend, symbols, initDate = initDate)
@@ -128,12 +129,16 @@ add.signal(
 )  
 
 enterAtr<-0
-tradeSize <- initEq/100
+tradeSize <- initEq/length(symbols)
 osFixedMoneyFirstEntry <- function(timestamp, orderqty, portfolio, symbol, ruletype, ...)
 {
   Atr <- as.numeric(mktdata[timestamp,]$atr)
-  enterAtr <- Atr
   orderqty <- round(tradeSize/Atr,-2)
+  ClosePrice <- as.numeric(Cl(mktdata[timestamp, ]))
+  feetmp <- orderqty * ClosePrice
+  half <- tradeSize/2
+  if(feetmp > half)
+  orderqty <- round(half,-2)
   return (orderqty)
 }
   
@@ -154,17 +159,30 @@ add.signal(
   arguments = list(column = "atrTrendFollow", relationship = "gt",threshold=0,cross=TRUE),
   label = "signal.gt.atrTrendFollow")	   
 
-#加仓，每次剩余资金的10%
-osPercentEquity <- function(timestamp, orderqty, portfolio,symbol, ruletype,trade.percent = 0.1,...)
+#加仓，如果剩余资金<起始的50%,一次性买完,大于50%，就买剩余资金的50%
+osPercentEquity <- function(timestamp, orderqty, portfolio,symbol, ruletype,trade.percent = 0.5,...)
 {
+    
+    pos <- getPosQty(multi.trend, symbol, timestamp)
+	if(pos < 0)
+	{
+	   orderqty <- 0
+	   return (orderqty)
+	}
     trading.pl <-sum(getTxns(Portfolio = portfolio, Symbol = symbol)$Txn.Value)
-    total.equity <- initEq - trading.pl
-    tradeSize <- total.equity * trade.percent
+    total.equity <- tradeSize - trading.pl
+	if(total.equity > tradeSize * 0.5)
+	{
+	  tradeSizeNow <- total.equity * 0.5
+	}
+	else
+	{
+	  tradeSizeNow <- total.equity
+	}
     ClosePrice <- as.numeric(Cl(mktdata[timestamp, ]))
-    orderqty <- round(tradeSize / ClosePrice,-2)
+    orderqty <- round(tradeSizeNow / ClosePrice,-2)
     return(orderqty)
 }
-  
 
 	
 ######################################################
@@ -216,9 +234,25 @@ add.signal(
 ) 
 
 #########################################
-# last(getPrice(mktdata)[paste('::',as.character(curIndex),sep='')][,1]) * 0.00003
+# last(getPrice(mktdata)[paste('::',as.character(curIndex),sep='')][,1]) * 0.05
 # normal enter
-.txnFees=-0.1
+trade.percent=-0.05
+
+getTnxFee <- function(TxnQty, TxnPrice, Symbol)
+{
+  print(paste0("getTnxFee:",TxnQty))
+  if(TxnQty == 0)
+  {
+    fee <- 0
+  }
+  else
+  {
+    fee <- round(5000 * TxnPrice * trade.percent, 2)
+    #fee <- TxnQty * TxnPrice * trade.percent
+  }
+  return(fee)
+}
+
 #applyRules(portfolio=multi.trend, symbol='SH600000',strategy=qs.strategy, mktdata=mktdata)  
 add.rule(
   qs.strategy,
@@ -227,7 +261,7 @@ add.rule(
     sigcol = "longEntry",
     sigval = TRUE,
 	replace=FALSE,
-	TxnFees=.txnFees,
+	TxnFees='getTnxFee',
     orderqty = 900,
     ordertype = 'market',
 	prefer='High',
@@ -246,7 +280,7 @@ add.rule(
     sigcol = "signal.gt.atrTrendFollow",
     sigval = TRUE,
 	replace=FALSE,
-	TxnFees=.txnFees,
+	TxnFees='getTnxFee',
     orderqty = 900,
     ordertype = 'market',
 	prefer='High',
@@ -266,7 +300,7 @@ add.rule(
     sigval = TRUE,
 	replace=TRUE,
 	prefer='Low',
-	TxnFees=.txnFees,
+	TxnFees='getTnxFee',
     orderqty = 'all',
     ordertype = 'market',
     orderside = 'long',
@@ -274,29 +308,9 @@ add.rule(
   type = 'exit',
   label='ExitLONG'
 )
+ 
 
-#stop loss
-stopLossPercent <- 0.01
-add.rule(
-  qs.strategy,
-  name = 'ruleSignal',
-  arguments = list(
-    sigcol = "longEntry",
-    sigval = TRUE,
-	replace=FALSE,
-	TxnFees=.txnFees,
-	orderside = 'long',
-    ordertype = 'stoplimit',
-    tmult=TRUE,
-	threshold=quote( stopLossPercent ),
-	orderqty = 'all',
-	orderset='ocolong'),
-    type = 'chain',
-	parent="FirstEnter",
-	label='StopLossLong',
-	enabled=FALSE) 
-
-.stoptrailing=0.01	
+.stoptrailing=0.1	
 add.rule(
       qs.strategy, 
       name = 'ruleSignal',
@@ -308,7 +322,7 @@ add.rule(
 		ordertype='stoptrailing', 
 		tmult=TRUE, 
 		threshold=quote(.stoptrailing),
-		TxnFees=.txnFees,
+		TxnFees='getTnxFee',
 		orderqty='all',
 		orderset='ocolong'
 	),
@@ -329,7 +343,7 @@ add.rule(
 		ordertype='stoptrailing', 
 		tmult=TRUE, 
 		threshold=quote(.stoptrailing),
-		TxnFees=.txnFees,
+		TxnFees='getTnxFee',
 		orderqty='all',
 		orderset='ocolong'
 	),
@@ -343,6 +357,8 @@ enable.rule(qs.strategy, type="chain", label="StopLossLong")
 enable.rule(qs.strategy, type="chain", label="StopTrailingLONG")
 	
 #########################################
+require(doParallel)
+registerDoParallel(cores=4)
 
 #applyIndicators(qs.strategy, SH600000)
 applyStrategy(strategy=qs.strategy, portfolios=multi.trend)
@@ -352,7 +368,7 @@ updateAcct(multi.trend)
 updateEndEq(multi.trend)	
 
 #getTxns(Portfolio=multi.trend, Symbol="SH600000", "2002-01-07")
-getTxns(Portfolio=multi.trend, Symbol="SH600000")
+getTxns(Portfolio=multi.trend, Symbol="SH600681")
 
 
 
