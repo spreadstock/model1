@@ -9,18 +9,18 @@ suppressWarnings(rm(list = ls(envir = .blotter), envir = .blotter))
 suppressWarnings(rm(list = ls(envir = .strategy), envir = .strategy))
 
 initDate <- '2012-01-01'
-startDate <- '2012-01-02'
-endDate <- '2014-09-30'
+startDate <- '2013-01-01'
+endDate <- '2014-12-31'
 initEq <- 1e5
 
 MaxPos <- 35000  #max position in stockA; 
 # max position in stock B will be max * ratio, i.e. no hard position limit in 
 # Stock B
-lvls <- 2 #how many times to fade; Each order's qty will = MaxPos/lvls
+lvls <- 3 #how many times to fade; Each order's qty will = MaxPos/lvls
 
-stock.folder.daily <- 'C:/important/ideas/stock/projects/model1/StockDatas/2016-08-09-Later_Rehabilitation_Cleaned/'
-symbList = c("SH601169" ,"SH601328")
-#symbList = c("SH600298" ,"SZ002123")
+stock.folder.daily <- 'C:/important/ideas/stock/projects/model1/StockDatas/2016-08-09-Former_Rehabilitation_leaned/'
+#symbList = c("SH601169" ,"SH601328")
+symbList = c("SH600353" ,"SZ002123")
 
 for(symbol in symbList) 
 { 
@@ -33,8 +33,9 @@ stock_daily <- get(symbList[1])
 stock_daily <-cbind(stock_daily, get(symbList[2]))
 
 
-for(symbol in symbList) 
-{ 
+
+for(symbol in symbList)
+{
   stock(symbol, currency = "USD", multiplier = 1)
 }
 
@@ -96,17 +97,6 @@ add.indicator(
   label = "SMA"
 )
 
-# add.indicator(
-#   strategy = qs.strategy,
-#   name = "rollingV2_1",
-#   arguments = list(
-#     x = quote(Cl(stock_daily)),
-#     width=5,
-#     FUN=calculate_spread,
-#     PREFUN=calcuateAbsPrice),
-#     label = "SPREAD"
-# )
-
 add.indicator(
   strategy = qs.strategy,
   name = "calculate_beta",
@@ -116,15 +106,6 @@ add.indicator(
   label = "SPREAD"
 )
 
-add.indicator(
-  strategy = qs.strategy,
-  name = "get.longTime",
-  arguments = list(
-    mktdata = quote(Cl(mktdata)),
-    date = "2012-12-03"
-  ),
-  label = "LONGTIME"
-)
 
 add.signal(
   qs.strategy,
@@ -180,19 +161,6 @@ add.signal(
   label = "Spread.cross.lower"
 )
 
-add.signal(
-  qs.strategy,
-  name = "sigComparison",
-  arguments = list(columns = c("LongTime.LONGTIME", "LongCondition.LONGTIME"), relationship = "eq"),
-  label = "Stock_LongTime"
-)
-
-add.signal(
-  qs.strategy,
-  name = "sigComparison",
-  arguments = list(columns = c("LongStart.LONGTIME", "LongCondition.LONGTIME"), relationship = "eq"),
-  label = "Stock_LongStartTime"
-)
 
 
 add.signal(
@@ -200,11 +168,9 @@ add.signal(
   name = "sigFormula",
   arguments = list(
     columns = c(
-      "StockMCl.gt.SMA",
-      "Stock_LongTime",
-      "Stock_LongStartTime"
+      "StockCl.gt.SMA"
     ),
-    formula = "(((StockMCl.gt.SMA == 1) | (Stock_LongTime  == 1)) & (Stock_LongStartTime == 0))",
+    formula = "(StockCl.gt.SMA == 1)",
     cross = FALSE
   ),
   label = "Stock.longEnter"
@@ -215,10 +181,9 @@ add.signal(
   name = "sigFormula",
   arguments = list(
     columns = c(
-      "Spread.cross.upper",
-      "Stock_LongStartTime"
+      "Spread.cross.upper"
     ),
-    formula = "((Spread.cross.upper == 1) & (Stock_LongStartTime  == 1))",
+    formula = "(Spread.cross.upper == 1)",
     cross = FALSE
   ),
   label = "Stock.upperAdj"
@@ -229,30 +194,27 @@ add.signal(
   name = "sigFormula",
   arguments = list(
     columns = c(
-      "Spread.cross.lower",
-      "Stock_LongStartTime"
+      "Spread.cross.lower"
     ),
-    formula = "((Spread.cross.lower == 1) & (Stock_LongStartTime  == 1))",
+    formula = "(Spread.cross.lower == 1)",
     cross = FALSE
   ),
   label = "Stock.lowerAdj"
 )
 
 
-# add.signal(
-#   qs.strategy,
-#   name = "sigFormula",
-#   arguments = list(
-#     columns = c(
-#       "StockMCl.lt.SMA",
-#       "Spread.lt.middle",
-#       "Spread.gt.middle"
-#     ),
-#     formula = "((StockMCl.lt.SMA == 1) & ((Spread.lt.middle == 1) | (Spread.gt.middle  == 1)))",
-#     cross = FALSE
-#   ),
-#   label = "Stock.longExit"
-# )
+add.signal(
+  qs.strategy,
+  name = "sigFormula",
+  arguments = list(
+    columns = c(
+      "StockMCl.lt.SMA"
+    ),
+    formula = "(StockMCl.lt.SMA == 1)",
+    cross = FALSE
+  ),
+  label = "Stock.longExit"
+)
 
 
 # #add rules
@@ -267,27 +229,14 @@ add.rule(
     replace = FALSE,
     prefer = 'Open',
     TxnFees="takeTranxFee",
-    osFUN = 'osSpreadMaxPos',
-    ordersidetype = 'initLong'
+    orderset="pairForTrend",
+    osFUN = 'osSpreadMaxDollar',
+    tradeSize = floor(MaxPos / 2 / lvls),
+    maxSize = floor(MaxPos)
   ),
-  type = 'enter'
+  type = 'enter',
+  label='longRule'
 )
-
-# # #add rules
-# add.rule(
-#   qs.strategy,
-#   name = 'ruleSignal',
-#   arguments = list(
-#     sigcol = "StockMCl.gt.SMA",
-#     sigval = TRUE,
-#     orderqty = 2000,
-#     ordertype = 'market',
-#     orderside = NULL,
-#     osFUN = 'osMaxPos'
-#   ),
-#   type = 'enter'
-# )
-
 
 # add.rule(
 #   qs.strategy,
@@ -304,7 +253,6 @@ add.rule(
 
 
 
-
 add.rule(
   qs.strategy,
   name = 'ruleSignal',
@@ -316,10 +264,12 @@ add.rule(
     replace = FALSE,
     prefer = 'Open',
     TxnFees="takeTranxFee",
-    osFUN = 'osSpreadMaxPos',
+    orderset="pairForTrend",
+    osFUN = 'osSpreadSize',
     ordersidetype = 'upperAdj'
   ),
-  type = 'enter'
+  type = 'enter',
+  label='UpperAdjRule'
 )
 
 add.rule(
@@ -333,12 +283,75 @@ add.rule(
     replace = FALSE,
     prefer = 'Open',
     TxnFees="takeTranxFee",
-    osFUN = 'osSpreadMaxPos',
+    orderset="pairForTrend",
+    osFUN = 'osSpreadSize',
     ordersidetype = 'lowerAdj'
   ),
-  type = 'enter'
+  type = 'enter',
+  label='LowerAdjRule'
 )
 
+add.rule(qs.strategy, 'ruleReblance',
+         arguments=list(rebalance_on='days'),
+         type='rebalance',
+         label='rebalance'
+)
+
+stopLossPercent <- 0.1
+add.rule(
+  qs.strategy,
+  name='ruleSignal',
+  arguments = list(sigcol="Stock.longEnter", sigval=TRUE,
+                   replace=FALSE,
+                   orderside='long',
+                   ordertype='stoptrailing',
+                   tmult=TRUE,
+                   threshold=quote(stopLossPercent),
+                   orderqty='all',
+                   prefer = 'Open',
+                   TxnFees="takeTranxFee",
+                   orderset='pairForTrend'),
+  type='chain', parent="longRule",
+  label='StopLossLong',
+  enabled=FALSE
+)
+
+
+add.rule(
+  qs.strategy,
+  name='ruleSignal',
+  arguments = list(sigcol="Stock.lowerAdj", sigval=TRUE,
+  replace=FALSE,
+  orderside='long',
+  ordertype='stoptrailing',
+  tmult=TRUE,
+  threshold=quote(stopLossPercent),
+  orderqty='all',
+  prefer = 'Open',
+  TxnFees="takeTranxFee",
+  orderset='pairForTrend'),
+type='chain', parent="LowerAdjRule",
+label='StopLossLower',
+enabled=FALSE
+)
+
+add.rule(
+  qs.strategy,
+  name='ruleSignal',
+  arguments = list(sigcol="Stock.upperAdj", sigval=TRUE,
+                   replace=FALSE,
+                   orderside='long',
+                   ordertype='stoptrailing',
+                   tmult=TRUE,
+                   threshold=quote(stopLossPercent),
+                   orderqty='all',
+                   prefer = 'Open',
+                   TxnFees="takeTranxFee",
+                   orderset='pairForTrend'),
+  type='chain', parent="UpperAdjRule",
+  label='StopLossUpper',
+  enabled=FALSE
+)
   
 # 
 # ################################################################################

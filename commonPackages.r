@@ -6,6 +6,9 @@ library(stringr)
 library(quantstrat)
 library(amap)
 library(tseries)
+library(devtools)
+library(IKTrading)
+library(PerformanceAnalytics)
 
 #writeStock write processed result into a csv file
 #Example, 

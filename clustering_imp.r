@@ -70,7 +70,7 @@ loadMedian <- function (start_date, end_date, symbList = NULL) {
   #stock.folder.med <- 'C:/important/ideas/stock/projects/model1/javaCode/Data/Median2/MedianAfter/'
   #stock.folder.med <- 'C:/important/ideas/stock/projects/model1/StockDatas/MedianBefore 20160823/'
   
-  symbList <- c("SH600037","SZ002467","SH600856","SH600487")
+  symbList <- c("SH601588","SZ000667","SZ002179","SH600391")
   if (length(symbList) == 0) {
     symbList <- listStocksFromDir(stock.folder.med)
   }
@@ -131,66 +131,76 @@ loadMonthClose <- function () {
   return (stock_month)
 }
 
+processFirst <- function (start_date, end_date, outputFolder, outputFileName) {
+  stock_month <- calOwnDirectionWithValue(loadMedian(start_date=start_date, end_date=end_date))
+  stockList <- colnames(stock_month)
+
+  finalResult_1st <- apply(combn(ncol(stock_month), 2), 2, FUN=calRelDirection, stockData=stock_month)
+  finalResult_1st<- t(finalResult_1st[,colSums(is.na(finalResult_1st))<nrow(finalResult_1st)])
+  
+  colnames(finalResult_1st)<- c("Stock1","Stock2","MatchPercentage")
+  #writeStock(x=finalResult_1st, stock.folder=outputFolder, ouput.name=outputFileName, isZoo = FALSE)
+  return (finalResult_1st)
+
+}
+
+process <- function (firstResultFolder, firstResultFileName, start_date, end_date) {
+  
+  finalResult_1st <- read.csv(paste(firstResultFolder, firstResultFileName, '.csv', sep=''), sep=',', check.names=FALSE)
+  finalResult_1st <- finalResult_1st[,-1]
+  refinedStockList <- unique(as.vector(as.matrix(finalResult_1st[,-3])))
+  stock_daily <- loadDailyClose(start_date=start_date2, end_date=end_date2, symbList = refinedStockList)
+  
+  finalResult_2nd <- vector()
+  for (aStockPair in 1:nrow(finalResult_1st)) {
+    aStock1 <- paste(finalResult_1st[aStockPair,1],"Close", sep=".")
+    aStock2 <- paste(finalResult_1st[aStockPair,2],"Close", sep=".")
+    aStockData <- stock_daily[,aStock1]
+    aStockData <- cbind(aStockData, stock_daily[,aStock2])
+    aStockData <- calcuateSimpleReturn(aStockData)
+    #exclude different direction
+    aStockData <- aStockData[which(sign(aStockData[,1]) == sign(aStockData[,2]))]
+    finalResult_2nd <- c(finalResult_2nd, cor(aStockData)[1,2])
+  }
+  
+  finalResult_1st <- cbind(finalResult_1st, finalResult_2nd)
+  
+  #3rd level process, cointeg
+  finalResult_3rd <- vector()
+  stock_daily1 <- na.omit(stock_daily)
+  for (aStockPair in 1:nrow(finalResult_1st)) {
+    aStock1 <- paste(finalResult_1st[aStockPair,1],"Close", sep=".")
+    aStock2 <- paste(finalResult_1st[aStockPair,2],"Close", sep=".")
+    aStockData <- stock_daily1[,aStock1]
+    aStockData <- cbind(aStockData, stock_daily1[,aStock2])
+    colnames(aStockData) <- c("stockX", "stockY")
+    finalResult_3rd <- c(finalResult_3rd, cointegrationTest(aStockData))
+  }
+  finalResult_1st <- cbind(finalResult_1st, finalResult_3rd)
+  
+  colnames(finalResult_1st)<- c("Stock1","Stock2","MatchPercentage","Cor","Cointegration")
+  outputFile <- "clusteringResult"
+  writeStock(x=finalResult_1st, stock.folder=stock.output, ouput.name=outputFile, isZoo = FALSE)
+  
+}
+
 ################# Main 
 stock.output <- 'C:/important/ideas/stock/projects/model1/testResult/testRel/'
 
 # 1st level processing
-#start_date <- "2004-01-01"
-#end_date <- "2014-12-31"
-
-# start_date <- "2012-01-01"
-# end_date <- "2014-12-31"
+start_date <- "2012-01-01"
+end_date <- "2014-12-31"
 # 
-# stock_month <- calOwnDirectionWithValue(loadMedian(start_date=start_date, end_date=end_date))
-# stockList <- colnames(stock_month)
-# 
-# finalResult_1st <- apply(combn(ncol(stock_month), 2), 2, FUN=calRelDirection, stockData=stock_month)
-# finalResult_1st<- t(finalResult_1st[,colSums(is.na(finalResult_1st))<nrow(finalResult_1st)])
-# 
-# 
-# colnames(finalResult_1st)<- c("Stock1","Stock2","MatchPercentage")
-# outputFile <- "clusteringResult_1st"
-# writeStock(x=finalResult_1st, stock.folder=stock.output, ouput.name=outputFile, isZoo = FALSE)
-
 outputFile <- "clusteringResult_1st"
-finalResult_1st <- read.csv(paste(stock.output, outputFile, '.csv', sep=''), sep=',', check.names=FALSE)
-finalResult_1st <- finalResult_1st[,-1]
-refinedStockList <- unique(as.vector(as.matrix(finalResult_1st[,-3])))
+finalResult_1st <- processFirst(start_date, end_date,stock.output,outputFile)
+
+
+#outputFile <- "clusteringResult_1st_bk"
+
 # 2nd level processing, cor
-start_date2 <- "2014-01-01"
+start_date2 <- "2013-01-01"
 end_date2 <- "2014-12-31"
-stock_daily <- loadDailyClose(start_date=start_date2, end_date=end_date2, symbList = refinedStockList)
 
-finalResult_2nd <- vector()
-for (aStockPair in 1:nrow(finalResult_1st)) {
-  aStock1 <- paste(finalResult_1st[aStockPair,1],"Close", sep=".")
-  aStock2 <- paste(finalResult_1st[aStockPair,2],"Close", sep=".")
-  aStockData <- stock_daily[,aStock1]
-  aStockData <- cbind(aStockData, stock_daily[,aStock2])
-  aStockData <- calcuateSimpleReturn(aStockData)
-  #exclude different direction
-  aStockData <- aStockData[which(sign(aStockData[,1]) == sign(aStockData[,2]))]
-  finalResult_2nd <- c(finalResult_2nd, cor(aStockData)[1,2])
-}
-
-finalResult_1st <- cbind(finalResult_1st, finalResult_2nd)
-
-#3rd level process, cointeg
-finalResult_3rd <- vector()
-stock_daily1 <- na.omit(stock_daily)
-for (aStockPair in 1:nrow(finalResult_1st)) {
-  aStock1 <- paste(finalResult_1st[aStockPair,1],"Close", sep=".")
-  aStock2 <- paste(finalResult_1st[aStockPair,2],"Close", sep=".")
-  aStockData <- stock_daily1[,aStock1]
-  aStockData <- cbind(aStockData, stock_daily1[,aStock2])
-  colnames(aStockData) <- c("stockX", "stockY")
-  finalResult_3rd <- c(finalResult_3rd, cointegrationTest(aStockData))
-}
-finalResult_1st <- cbind(finalResult_1st, finalResult_3rd)
-
-colnames(finalResult_1st)<- c("Stock1","Stock2","MatchPercentage","Cor","Cointegration")
-outputFile <- "clusteringResult"
-writeStock(x=finalResult_1st, stock.folder=stock.output, ouput.name=outputFile, isZoo = FALSE)
 # finalResult_2nd <- buildClusting(stock_daily_dist)
 # finalResult_2nd_groups <- cutree(finalResult_2nd, k=6)
 
