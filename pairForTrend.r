@@ -1,11 +1,40 @@
+################################################################################
+# custom indicator function for monthly SMA                                    #
+################################################################################
+get.montlySMA <- function(mktdata, n) {
+  
+  monthData <- mktdata
+  indicatorM <- to.monthly(monthData, indexAt='endof', drop.time=TRUE)
+  indicator <- SMA (Cl(indicatorM),n)
+  indicator <- cbind(Cl(indicatorM), indicator)
+  colnames(indicator) <- c("StockMonth", "StockMonthSMA10")
+  
+  
+  numCol <- ncol(mktdata)
+  numColNew <- ncol(indicator)
+  indicator <- cbind(mktdata,indicator)
+  
+  aName <- "StockMonth"
+  indicator[, aName] <-
+    na.locf(indicator[, aName], na.rm = FALSE, fromLast = FALSE)
+  aName <- "StockMonthSMA10"
+  indicator[, aName] <-
+    na.locf(indicator[, aName], na.rm = FALSE, fromLast = FALSE)
+  
+  
+  return(indicator[,(numCol+1):(numCol+numColNew)])
+}
+
 #match pair and setup pair data
+#folderName
+#fileName, clustering result file name
 #x, master stock symbols
 #return, updated stock symbols including paired stocks
-matchPairs <- function(x)
+matchPairs <- function(folderName, fileName, x)
 {
-  stock.output <- 'C:/important/ideas/stock/projects/model1/testResult/testRel/'
-  outputFile <- "clusteringResult_bk"
-  finalResult_1st <- read.csv(paste(stock.output, outputFile, '.csv', sep=''), sep=',', check.names=FALSE)
+  #stock.output <- 'C:/important/ideas/stock/projects/model1/testResult/testRel/'
+  #outputFile <- "clusteringResult_bk"
+  finalResult_1st <- read.csv(paste(folderName, fileName, '.csv', sep=''), sep=',', check.names=FALSE)
   finalResult_1st <- finalResult_1st[,-1]
   #only cointegration <= 0.1 considered
   finalResult_1st <- finalResult_1st[finalResult_1st$Cointegration<=0.1,]
@@ -32,6 +61,16 @@ matchPairs <- function(x)
 
     
   }
+  #add not paired
+  i <- numPairs + 2
+  for (aStock in x) {
+    if (aStock %in% pairResult[,1] | aStock %in% pairResult[,2]) {
+    } else {
+      pairResult[i,1] <- as.character(aStock)
+      pairResult[i,2] <- "NO"
+      i <- i + 1
+    }
+  }
   pairResult[1,1] <- numPairs
   
   return(pairResult)
@@ -44,7 +83,9 @@ getPaired <- function(portfolio, x)
   pairedStock <- NULL
   pairList <- .blotter[[paste('portfolio', portfolio, sep='.')]]$pairs
   if (x %in% pairList[,1]) {
-    pairedStock <- pairList[pairList[,1] == x,]
+    theOther <- pairList[pairList[,1] == x,2]
+    if (theOther != "NO")
+      pairedStock <- pairList[pairList[,1] == x,]
   } else  if (x %in% pairList[,2]) {
     pairedStock <- pairList[pairList[,2] == x,]
   } 
@@ -60,63 +101,22 @@ getPaired <- function(portfolio, x)
 #return, N/A
 setupPairsGlobals <- function(portfolio, x, lvls=1)
 {
-  pairs <- matrix(ncol=8)
+  pairs <- matrix(ncol=4)
   
   for (aItem in 1:nrow(x)) {
-    aPair <- c(x[aItem,1],x[aItem,2],lvls,0,0,0,0,0)
+    aPair <- c(x[aItem,1],x[aItem,2],lvls,0)
     pairs <- rbind(pairs,aPair)
   }
-  colnames(pairs) <- c("Stock1", "Stock2", "lvls","transA","transB", "transAInit", "transBInit","direction")
+  colnames(pairs) <- c("Stock1", "Stock2", "lvls","direction")
   pairs<- pairs[-1,,drop=FALSE]
   .blotter[[paste('portfolio', portfolio, sep='.')]]$pairs <- pairs
 }
 
 
-#set position of pair stocks
+#set pair direction of pair stocks
 #protfolio
 #x, a stock symbol
-#position
-#lvls
-#return, N/A
-setPairPosition <- function(portfolio, x, position)
-{
-
-  pairs <- .blotter[[paste('portfolio', portfolio, sep='.')]]$pairs
-  
-  if (x %in% pairs[,1]) {
-    .blotter[[paste('portfolio', portfolio, sep='.')]]$pairs[x == pairs[,1],"transA"] <- position
-  } else if (x %in% pairs[,2]) {
-    .blotter[[paste('portfolio', portfolio, sep='.')]]$pairs[x == pairs[,2],"transB"] <- position
-  } else {
-    print(paste("Warning! stock is no pair ", x))
-  }
-}
-
-#get position from pair stocks
-#protfolio
-#x, a stock symbol
-#return, position
-getPairPosition <- function(portfolio, x)
-{
-  pairs <- .blotter[[paste('portfolio', portfolio, sep='.')]]$pairs
-  
-  qty <- 0
-  
-  if (x %in% pairs[,1]) {
-    qty <- .blotter[[paste('portfolio', portfolio, sep='.')]]$pairs[x == pairs[,1],"transA"]
-  } else if (x %in% pairs[,2]) {
-    qty <- .blotter[[paste('portfolio', portfolio, sep='.')]]$pairs[x == pairs[,2],"transB"]
-  } else {
-    print(paste("Warning! stock is no pair ", x))
-  }
-  return (as.numeric(qty))
-}
-
-#set position of pair stocks
-#protfolio
-#x, a stock symbol
-#position
-#lvls
+#direction
 #return, N/A
 setPairDirection <- function(portfolio, x, direction)
 {
@@ -132,7 +132,7 @@ setPairDirection <- function(portfolio, x, direction)
   }
 }
 
-#get position from pair stocks
+#get pair direction from pair stocks
 #protfolio
 #x, a stock symbol
 #return, position
@@ -152,47 +152,8 @@ getPairDirection <- function(portfolio, x)
   return (as.numeric(qty))
 }
 
-#set position of pair stocks
-#protfolio
-#x, a stock symbol
-#position
-#lvls
-#return, N/A
-setPairInitPosition <- function(portfolio, x, position)
-{
-  
-  pairs <- .blotter[[paste('portfolio', portfolio, sep='.')]]$pairs
-  
-  if (x %in% pairs[,1]) {
-    .blotter[[paste('portfolio', portfolio, sep='.')]]$pairs[x == pairs[,1],"transAInit"] <- position
-  } else if (x %in% pairs[,2]) {
-    .blotter[[paste('portfolio', portfolio, sep='.')]]$pairs[x == pairs[,2],"transBInit"] <- position
-  } else {
-    print(paste("Warning! stock is no pair ", x))
-  }
-}
 
-#get position from pair stocks
-#protfolio
-#x, a stock symbol
-#return, position
-getPairInitPosition <- function(portfolio, x)
-{
-  pairs <- .blotter[[paste('portfolio', portfolio, sep='.')]]$pairs
-  
-  qty <- 0
-  
-  if (x %in% pairs[,1]) {
-    qty <- .blotter[[paste('portfolio', portfolio, sep='.')]]$pairs[x == pairs[,1],"transAInit"]
-  } else if (x %in% pairs[,2]) {
-    qty <- .blotter[[paste('portfolio', portfolio, sep='.')]]$pairs[x == pairs[,2],"transBInit"]
-  } else {
-    print(paste("Warning! stock is no pair ", x))
-  }
-  return (as.numeric(qty))
-}
-
-#get position from pair stocks
+#get lvls from pair stocks
 #protfolio
 #x, a stock symbol
 #return, Lvl
@@ -286,10 +247,9 @@ setupPairsSignals <- function(portfolio,stockData)
     name = "sigFormula",
     arguments = list(
       columns = c(
-        "Spread.cross.upper",
-        "Stock_LongStartTime"
+        "Spread.cross.upper"
       ),
-      formula = "((Spread.cross.upper == 1) & (Stock_LongStartTime  == 1))",
+      formula = "(Spread.cross.upper == 1)",
       cross = FALSE
     ),
     label = "Stock.upperAdj"
@@ -300,10 +260,9 @@ setupPairsSignals <- function(portfolio,stockData)
     name = "sigFormula",
     arguments = list(
       columns = c(
-        "Spread.cross.lower",
-        "Stock_LongStartTime"
+        "Spread.cross.lower"
       ),
-      formula = "((Spread.cross.lower == 1) & (Stock_LongStartTime  == 1))",
+      formula = "(Spread.cross.lower == 1)",
       cross = FALSE
     ),
     label = "Stock.lowerAdj"
@@ -348,7 +307,8 @@ setupPairsSignals <- function(portfolio,stockData)
 }
 
 osSpreadForTrend <- function (data, timestamp, ordertype, orderside, 
-                              portfolio, symbol, ruletype, ..., orderprice, ordersidetype,portfolioName) {
+                              portfolio, symbol, ruletype, ..., orderprice, ordersidetype) {
+  portfolioName <- portfolio
   portf <- getPortfolio(portfolio)
   
   lvls <- getPairLvls(portfolioName, symbol)
@@ -356,125 +316,119 @@ osSpreadForTrend <- function (data, timestamp, ordertype, orderside,
   if (is.null(thePair))
     return (0)
   
-  pairLocation <- which(thePair==symbol)
-  if (pairLocation == 1) {
-    transA <- getPosQty(portfolio, symbol, timestamp)
-    transB <- getPairPosition(portfolioName, thePair[2])
-  } else {
-    transB <- getPosQty(portfolio, symbol, timestamp)
-    transA <- getPairPosition(portfolioName, thePair[1])
+  currentQtyA <- getPosQty(portfolio, thePair[1], timestamp)
+  currentQtyB <- getPosQty(portfolio, thePair[2], timestamp)
+  
+  if ((currentQtyA == 0 ) | (currentQtyB == 0)) {
+    return (0)
   }
-  transAInit <- getPairInitPosition(portfolioName, thePair[1])
-  transBInit <- getPairInitPosition(portfolioName, thePair[2])
+  
   transDirection <- getPairDirection(portfolioName, symbol)
+  
+  
+  pairLocation <- which(thePair==symbol)
+
+  
   beta <-  mktdata[,"Beta.SPREAD"]
   ratio <- as.numeric(coredata(beta[timestamp]))
   #print(ratio)
   
-  if (ordersidetype == "initLong") {
-    setPairDirection(portfolioName,symbol,0)
-    if (pairLocation == 1) {
-        if (transAInit != 0) {
-          qtyA <- transAInit
-          if (transBInit != 0) {
-            qtyB <- transBInit
-          } else {
-            #re-adjust transBInit by transAinit
-            qtyB <- floor(transAInit / ratio)
-          }
-        } else {
-          qtyA <- floor(0.5 * 35000 / orderprice )
-          qtyB <- floor(qtyA / ratio)
-        }
-        setPairPosition(portfolioName,thePair[1],qtyA )
-        setPairPosition(portfolioName,thePair[2],qtyB )
-        setPairInitPosition(portfolioName,thePair[1],qtyA )
-        setPairInitPosition(portfolioName,thePair[2],qtyB )
-        qty <- qtyA
-      
-    } else {
-        if (transAInit != 0) {
-          qtyA <- transAInit
-          if (transBInit != 0) {
-            qtyB <- transBInit
-          } else {
-            #re-adjust transBInit by transAinit
-            qtyB <- floor(transAInit / ratio)
-          }
-        } else {
-          qtyA <- floor(0.5 * 35000 / orderprice )
-          qtyB <- floor(qtyA / ratio)
-        }
-        setPairPosition(portfolioName,thePair[1],qtyA )
-        setPairPosition(portfolioName,thePair[2],qtyB )
-        setPairInitPosition(portfolioName,thePair[1],qtyA )
-        setPairInitPosition(portfolioName,thePair[2],qtyB )
-        qty <- qtyB
-    } 
-  } else {
-    if (transA <= 0 | transB <= 0)
-      return (0)
-    
-    qty <- 0
-    
-    
-    if (ordersidetype == "upperAdj") {
-      if (transDirection == 1) {
-        # reject transaction for dup direction
-        qty <- 0
-      } else {
-        qtyB <- floor(transB / lvls)
-        qtyA <- floor(transB / lvls * ratio)
-        setPairPosition(portfolioName,thePair[1],transA + qtyA )
-        setPairPosition(portfolioName,thePair[2],transB - qtyB )
-        setPairDirection(portfolioName,symbol,1)
-        if (pairLocation == 1) {
-          qty <- qtyA
-        } else {
-          qty <- -qtyB
-        }        
-      }
-
-    } else if (ordersidetype == "lowerAdj") {   
-      if (transDirection == -1) {
-        # reject transaction for dup direction
-        qty <- 0
-      } else {
-        qtyA <- floor(transA / lvls)
-        qtyB <- floor(transA / lvls / ratio)
-        setPairPosition(portfolioName,thePair[1],transA - qtyA )
-        setPairPosition(portfolioName,thePair[2],transB + qtyB )
-        setPairDirection(portfolioName,symbol,-1)
-        if (pairLocation == 1) {
-          qty <- -qtyA
-        } else {
-          qty <- qtyB
-        }
-      }
-    } else {
+  if (ordersidetype == "upperAdj") {
+    if (transDirection == 1) {
+      # reject transaction for dup direction
       qty <- 0
-    }         
+    } else {
+      qtyB <- floor(currentQtyB / lvls)
+      qtyA <- floor(qtyB * ratio)
+      if (pairLocation == 1) {
+        qty <- qtyA
+      } else {
+        qty <- -qtyB
+        if (qty != 0)
+          setPairDirection(portfolioName,symbol,1)
+        
+      }
+    }
+    
+  } else if (ordersidetype == "lowerAdj") {   
+    if (transDirection == -1) {
+      # reject transaction for dup direction
+      qty <- 0
+    } else {
+      qtyA <- floor(currentQtyA / lvls)
+      qtyB <- floor(qtyA / ratio)
+      if (pairLocation == 1) {
+        qty <- -qtyA
+      } else {
+        qty <- qtyB
+        if (qty != 0)
+          setPairDirection(portfolioName,symbol,-1)
+      }
+      }
+      
+  } else {
+    qty <- 0
   }
   
-  
-  
+
   orderqty <- qty
   return(orderqty) 
 }
 
-################################################################################
-# custom indicator function for monthly SMA                                    #
-################################################################################
-initlongTime <- function(mktdata) {
+osSpreadMaxDollar <- function(data, timestamp, orderqty, ordertype, orderside,
+                              portfolio, symbol, prefer="Open", tradeSize,
+                              maxSize, integerQty=TRUE,
+                              ...) {
+  portfolioName <- portfolio
+  portf <- getPortfolio(portfolio)
+  thePair <- as.vector(getPaired(portfolioName,symbol))
+  if (is.null(thePair))
+    return (0)
   
-  timeList <- index(mktdata)
-  longTime <- rep(0, nrow(mktdata))
-  longTime[1] <- 1
-  longStart <- rep(1, nrow(mktdata))
-  longStart[1] <- 0
-  longResult <- cbind(longTime,longStart, 1)
-  colnames(longResult) <- c("LongTime","LongStart" ,"LongCondition")
-  longResultTimed <- xts(x=longResult, order.by=timeList)
+  pairLocation <- which(thePair==symbol)
+  beta <-  mktdata[,"Beta.SPREAD"]
+  ratio <- as.numeric(coredata(beta[timestamp]))
+  if (ratio == 0 ) {
+    #to do
+    return (0)
+  } else {
+    posStock1 <- getPosQty(portfolio, thePair[1], timestamp)
+    posStock2 <- getPosQty(portfolio, thePair[2], timestamp)
+    
+    if(prefer=="Close") {
+      price <- as.numeric(Cl(data[timestamp,]))
+    } else {
+      price <- as.numeric(Op(data[timestamp,]))
+    }
+    if (pairLocation == 1) {
+      priceOther <- price * ratio
+    } else {
+      priceOther <- price / ratio
+    }
+    
+    totalPosValue <- posStock1 * price + posStock2 * priceOther
+    remainValue <- (maxSize - totalPosValue) / 2
+    
+    #posVal <- pos*price
+    if (orderside=="short") {
+      dollarsToTransact <- max(tradeSize, maxSize-posVal)
+      #If our position is profitable, we don't want to cover needlessly.
+      if(dollarsToTransact > 0) {dollarsToTransact=0}
+    } else {
+      dollarsToTransact <- min(tradeSize, remainValue)
+      #If our position is profitable, we don't want to sell needlessly.
+      if(dollarsToTransact < 0) {dollarsToTransact=0}
+    }
+    qty <- dollarsToTransact/price
+    if(integerQty) {
+      qty <- trunc(qty)
+    }
+    return(qty)    
+  }
   
-  return(longResultTimed)
+}
+
+ruleReblance <- function (..., portfolio, symbol, timestamp) 
+{
+  return (1)
 }

@@ -9,7 +9,8 @@
 # updateEndEq(qs.strategy, Dates=paste(startDate, endDate, sep="::"))
 # getEndEq(qs.strategy, Sys.time())
 
-qs.strategy <- "qsModel1"
+#qs.strategy <- "qsModel1"
+qs.strategy <- "multitrend"
 start_t<-Sys.time()
 out<-applyStrategy.rebalancing(qs.strategy , portfolios=qs.strategy,verbose=TRUE)
 end_t<-Sys.time()
