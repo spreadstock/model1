@@ -173,6 +173,24 @@ getPairLvls <- function(portfolio, x)
   return (as.numeric(lvls))
 }
 
+calculate_totalbetaV3 <- function(x, dx) {
+  lastPoint <- 1
+  xx <- x
+  xx[1,2] <- NA
+  num <- nrow(xx)
+  for (aItem in 2:num) {
+    if (is.na(xx[lastPoint,1])) {
+      xx[aItem,2] <- NA
+    } else {
+      spread <- round(dx[aItem,2] - dx[aItem,1] * coredata(xx[lastPoint,1]), 5)
+      xx[aItem,2] <- spread
+    }
+    lastPoint <- aItem
+    
+  }
+  return (xx)
+}
+
 calculate_totalbeta <- function(x, threshold) {
   lastPoint <- 1
   xx <- na.fill(x,0)
@@ -192,6 +210,7 @@ calculate_totalbeta <- function(x, threshold) {
 
 calculate_betaforTrend <- function(x, currentStockName) {
   
+  lookBack <- 30
   aStock <- word(currentStockName,sep=fixed("."))
   pairedStock <- getPaired(multi.trend, aStock)
   if (is.null(pairedStock)) {
@@ -204,8 +223,15 @@ calculate_betaforTrend <- function(x, currentStockName) {
   dx <- na.omit(stockData)
   beta<-round(dx[,2] / dx[,1],5)
   #beta <- lag(beta,1) #no need lag, because the platform already delay 1 day
-  beta_total <- calculate_totalbeta(cbind(beta, 0), 0.075)
-  beta <- cbind(beta_total, 0.075, -0.075)
+  #beta_total <- calculate_totalbeta(cbind(beta, 0), 0.075)
+  #beta <- cbind(beta_total, 0.075, -0.075)
+  
+  beta_total <- calculate_totalbetaV3(cbind(beta, 0),dx)
+  movingAvg = calcuateSMA(beta_total[,2],lookBack) #Moving average
+  movingStd = runSD(beta_total[,2],lookBack, sample=FALSE) #Moving standard deviation / bollinger bands
+  spreadUpper <- movingAvg + 1.5 * movingStd
+  spreadLower <- movingAvg - 1.5 * movingStd
+  beta <- cbind(beta_total, spreadUpper, spreadLower)
   
   colnames(beta) <- c("Beta","BetaTotal","Upper", "Lower")
   return (beta) 
