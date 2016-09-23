@@ -23,8 +23,9 @@ lvls <- 4 #how many times to fade; Each order's qty will = MaxPos/lvls
 clustering.folder <- "C:/important/ideas/stock/projects/model1/testResult/testRel/"
 clustering.name <- "clusteringResult_bk"
 stock.folder <- 'C:/important/ideas/stock/projects/model1/StockDatas/2016-08-09-Later_Rehabilitation_Cleaned/'
-symbList = c("SH600298","SH600037","SH601908")#for testing
-
+#symbList = c("SH600298","SH600037","SH601908")#for testing
+#symbList = c("SH600097","SH600183","SH600303","SH600697","SH601007","SZ000029","SZ000040","SZ000043","SZ000505","SZ000538","SZ002409")#for testing
+symbList = c("SZ000040")#for testing
 #generated result example,
 #global data
 #Stock1     Stock2     lvls direction
@@ -111,7 +112,7 @@ add.signal(
 ) 
 
 add.signal(
-  qs.strategy,
+  multi.trend,
   name = "sigFormula",
   arguments = list(
     columns = c(
