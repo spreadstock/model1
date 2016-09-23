@@ -1,3 +1,67 @@
+#cc.最近三天的收盘价都在10天均线之上
+isCloseOverSMA <- function(x)
+{
+  for (i in 1:nrow(x))
+  {
+     close <- as.numeric(x[i,1])
+     ma10 <- as.numeric(x[i,2])
+     if(close < ma10)
+	 {
+	   return (FALSE)
+	 }	 
+  }
+  return (TRUE)
+}
+
+isOverSMA10LastDays <- function(x, flashBackDay=3) 
+{ 
+  x$SMA10 <- SMA(x,10)
+  a <- matrix(FALSE,nrow=nrow(x),ncol=1)
+  startIndex <- 10+flashBackDay;
+  
+  for (i in startIndex:nrow(x))
+  {
+    last3 <- x[(i-2):i]	
+    if(isCloseOverSMA(last3))
+    {
+      a[i] <- TRUE
+    }
+  }
+  return (a) 
+}
+
+#cc.最近三天的收盘价都在10天均线之下
+isCloseBelowSMA <- function(x)
+{
+  for (i in 1:nrow(x))
+  {
+     close <- as.numeric(x[i,1])
+     ma10 <- as.numeric(x[i,2])
+     if(close > ma10)
+	 {
+	   return (FALSE)
+	 }	 
+  }
+  return (TRUE)
+}
+
+isBelowSMA10LastDays <- function(x, flashBackDay=3) 
+{ 
+  x$SMA10 <- SMA(x,10)
+  a <- matrix(FALSE,nrow=nrow(x),ncol=1)
+  startIndex <- 10+flashBackDay;
+  
+  for (i in startIndex:nrow(x))
+  {
+    last3 <- x[(i-2):i]	
+    if(isCloseBelowSMA(last3))
+    {
+      a[i] <- TRUE
+    }
+  }
+  return (a) 
+}
+
 #c.	以上买点还必须符号最近10天里上涨时的平均交易量大于下跌时的平均交易量。
 isVolumeTrendUp <- function(x)
 {
@@ -37,11 +101,11 @@ trainGtOsc <- function(x, numberofBreak = 3)
   a <- matrix(FALSE,nrow=nrow(x),ncol=1)
   for (i in 1:nrow(x))
   {
-    if(gtCount<numberofBreak && !is.na(x[i]) && x[i] > 0)
+    if(gtCount< (numberofBreak -1) && !is.na(x[i]) && x[i] > 0)
     {
       gtCount=gtCount+1;
     }
-    else if(gtCount >= numberofBreak && !is.na(x[i]) && x[i] > 0)
+    else if(gtCount >= (numberofBreak -1) && !is.na(x[i]) && x[i] > 0)
     {
       a[i] <- TRUE
       gtCount <- 0
@@ -134,8 +198,14 @@ isTrendOneUpCamel <- function(x ,targetShortGrowDay=2, targetDiffGrowDay=3, targ
 #加仓，当上涨0.5个ATR并且还持有股票的时候，就增加ATR follow的买入信号
 growCertainATRIndex <- function(x, index, closeTnxPrice, atrTnxPrice, ATRRate=0.5) 
 {	
+    #print(paste0("growCertainATRIndex: ",nrow(x),"  ",index))
+	if(index == nrow(x))
+	{
+	  return (0)
+	}
 	aaa <- strsplit(colnames(x)[1],"[.]")
 	symbol <- aaa[[1]][1]
+	print(paste0("growCertainATRIndex: ",symbol))
 	for (i in (index+1):nrow(x))
     {
 	   diff <-(as.numeric(x[i]) - closeTnxPrice)
@@ -150,16 +220,19 @@ growCertainATRIndex <- function(x, index, closeTnxPrice, atrTnxPrice, ATRRate=0.
 findGrowATRSig <- function(x, index, ATRRate=0.5) 
 {
 #如果符合趋势，这index+1是交易点
-     if(x[index]$X1.isvolumeUp == 1 & (x[index]$X1.treat_trendGrowPlus == 1 | x[index]$X1.trendGrowMinus ==1 | x[index]$X1.trained_osc==1 ))  
+     if(x[index]$X1.isvolumeUp == 1 & (x[index]$X1.treat_trendGrowPlus == 1 | x[index]$X1.trendGrowMinus ==1))  
 	 #if(x[index]$longEntry == 1) 
 	 {
+	     if(index == nrow(x))
+		 {
+		    return (0)
+		 }
 	     tnxIndex <- index+1
-
-		 closeTnxPrice <- as.numeric(Cl(x[index]))
-         atrTnxPrice <- (ATRRate * as.numeric(x[index]$atr))
+		 closeTnxPrice <- as.numeric(Cl(x[tnxIndex]))
+         atrTnxPrice <- (ATRRate * as.numeric(x[tnxIndex]$atr))
 		 return (growCertainATRIndex(Cl(x),index=tnxIndex,closeTnxPrice=closeTnxPrice,atrTnxPrice=atrTnxPrice))
-
 	 }
+	 
 	 else
 	 {
 	    return (0)

@@ -91,15 +91,18 @@ stock_symbols  <- listStocksFromDir(stock.folder)
 result <- list(NA)
 for(symbol in stock_symbols) 
 { 
-  print(symbol)
+  
   stock <-  loadStock(stock.folder, symbol, operation.name="all")
-  if( nrow(stock) > 10 ) {  
+  if( nrow(stock) > 10 ) { 
+  stock <- subsetByDateRange(stock,'2012-01-01','2014-12-31')
+  if( nrow(stock) > 10 ) {
     if(isGainRuleLastDays(stock)
        && isGainolumeRuleLastDays(stock)
        && isShorternMAOverLongTermMARule(stock)
        && isLowestPointRule(stock)) { 
       result <- c(result, symbol)
-    }    
+    } 
+  }
   rm(stock) }
 }
   return (result[-1])  
@@ -113,6 +116,8 @@ getPrintMatchStocks <- function(stock.folder){
   for(symbol in stock_symbols) 
   { 
     stock <-  loadStock(stock.folder, symbol, operation.name="all")
+	  stock <- subsetByDateRange(stock,'2001-01-01','2014-01-01')
+	  print(end(stock))
     if( nrow(stock) > 10 ) {  
       isGainRule <- isGainRuleLastDays(stock)
       isGainolume <- isGainolumeRuleLastDays(stock)
@@ -130,10 +135,8 @@ getPrintMatchStocks <- function(stock.folder){
   return (printResult[-1])  
 } 
 
-source.folder <- 'C:/Users/exubixu/Desktop/Imp/git_new/model1/'
-source(paste0(source.folder,"commonPackages.r"))
-#stock.folder <- 'C:/Users/exubixu/Desktop/new1/'
-stock.folder <- 'C:/Users/exubixu/Desktop/Imp/git_new/model1/StockDatas/2016-08-09-Later_Rehabilitation_Cleaned/'
+#source(paste0(source.folder,"commonPackages.r"))
+#stock.folder <- 'C:/Users/exubixu/Desktop/Imp/git_new/model1/StockDatas/2016-08-09-Later_Rehabilitation_Cleaned/'
+#mySelected <- getTrendMatchStocks(stock.folder)
 #write.csv(x=mySelected, file="C:/Users/exubixu/Desktop/new1/test.csv", row.names = TRUE)
-mySelected <- getTrendMatchStocks(stock.folder)
 
