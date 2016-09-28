@@ -446,7 +446,7 @@ getOrderBook(multi.trend)
 sink()
 
 sink(paste0(result.folder,'SH600684','tnx.txt'))
-tstats <- getTxns(Portfolio=multi.trend, Symbol='SH600684')
+getTxns(Portfolio=multi.trend, Symbol='SH600684')
 sink()
 
 #查看transaction 历史
