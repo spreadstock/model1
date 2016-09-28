@@ -115,7 +115,7 @@ trainGtOsc <- function(x, numberofBreak = 3)
   
 }
   
-#a.	当差值是负数但是持续变大超过3或5天时，标识为买点
+#a.	当差值（是负数但是 删除）持续变大超过3或5天时，标识为买点
 isTrendUp <- function(matrixList)
 {
   for (i in 1:(nrow(matrixList)-1))
@@ -134,7 +134,7 @@ treat_trendGrowMinus <- function(x, targetDiffGrowDay=3)
   startIndex <- middleSMA+targetDiffGrowDay
   for (i in startIndex:nrow(x))
   {
-    if(isTrendUp(as.matrix(x[(i-targetDiffGrowDay):i])) && x[i] < 0)
+    if(isTrendUp(as.matrix(x[(i-targetDiffGrowDay):i])))
     {
       a[i] <- TRUE
     }
@@ -143,7 +143,7 @@ treat_trendGrowMinus <- function(x, targetDiffGrowDay=3)
 }
 
 
-#b.	当差值是负数并持续变大但不到3天立即又变小，可以用最近变大的天数减去变小的天数，
+#b.	当差值（是负数但是 删除）并持续变大但不到3天立即又变小，可以用最近变大的天数减去变小的天数，
 #然后跟最近变大的周期天数相加，如果大于5也可以标识为买点
 treat_trendGrowPlus <- function(x, targetShortGrowDay=2, targetDiffGrowDay=3, targetDiffDownDay=2) 
 { 
@@ -186,7 +186,6 @@ isTrendOneUpCamel <- function(x ,targetShortGrowDay=2, targetDiffGrowDay=3, targ
   }
   if(topCount ==1
      &&lowCount==1
-	 &&x[topIndex] < 0
 	 &&lowIndex > topIndex
 	 &&lowIndex - topIndex <= targetDiffDownDay
 	 &&nrow(x) - (lowIndex - topIndex) >= targetDiffGrowDay
@@ -257,7 +256,7 @@ addGrowATRSig <- function(x)
 	
 ######################################################
 
-#d.	当差值是正数但是持续变小超过3或5天，或者变负数时标识为卖点。
+#d.	当差值（是正数×）但是持续变小超过3或5天，或者变负数时标识为卖点。
 isTrendDown <- function(matrixList)
 {
   for (i in 1:(nrow(matrixList)-1))
@@ -276,7 +275,7 @@ treat_trendDownMinus <- function(x, targetDiffDownDay=3)
   startIndex <- middleSMA+targetDiffDownDay
   for (i in startIndex:nrow(x))
   {
-    if(isTrendDown(as.matrix(x[(i-targetDiffDownDay):i])) && x[i] > 0)
+    if(isTrendDown(as.matrix(x[(i-targetDiffDownDay):i])))
     {
       a[i] <- TRUE
     }
@@ -289,7 +288,7 @@ treat_trendDownMinus <- function(x, targetDiffDownDay=3)
 }
 
 
-#e.	当差值是正数并持续变小但不到3天立即又变大，可以用最近变小的天数减去变大的天数，然后跟最近变小的周期天数相加，如果大于5也可以标识为卖点
+#e.	当差值（是正数×）并持续变小但不到3天立即又变大，可以用最近变小的天数减去变大的天数，然后跟最近变小的周期天数相加，如果大于5也可以标识为卖点
 treat_trendDownPlus <- function(x, targetShortGrowDay=2, targetDiffGrowDay=3, targetDiffDownDay=2) 
 { 
   a <- matrix(FALSE,nrow=nrow(x),ncol=1)
@@ -331,7 +330,6 @@ isTrendOneDwonCamel <- function(x ,targetShortDownDay=2, targetDiffDownDay=3, ta
   }
   if(topCount ==1
      &&lowCount==1
-	 &&x[lowIndex] > 0
 	 &&lowIndex < topIndex
 	 &&topIndex - lowIndex <= targetDiffUpDay
 	 &&nrow(x) - (lowIndex - topIndex) >= targetDiffDownDay

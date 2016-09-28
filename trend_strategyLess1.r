@@ -28,8 +28,7 @@ for(symbol in symbols)
 { 
   stock(symbol, currency='USD',multiplier=1)
   a  <-  loadStock(stock.folder, symbol, operation.name="all") 
-  #a <- subsetByDateRange(a,startDate,endDate)
-  a <- subsetByDateRange(a,'2011-01-01','2016-09-02')
+  a <- subsetByDateRange(a,startDate,endDate)
   a$SMAShort <- SMA(Cl(a),shortSMA)
   a$SMAMid <- SMA(Cl(a),middleSMA)
   a$SMADiff <- a$SMAShort - a$SMAMid
@@ -429,9 +428,9 @@ require(doParallel)
 registerDoParallel(cores=4)
 
 
-sink(paste0(result.folder,'aa.txt'))
+#sink(paste0(result.folder,'aa.txt'))
 applyStrategy(strategy=qs.strategy, portfolios=multi.trend)
-sink()
+#sink()
 
 updatePortf(multi.trend)
 updateAcct(multi.trend)
@@ -442,19 +441,28 @@ updateEndEq(multi.trend)
 #getTxns(Portfolio=multi.trend, Symbol='SZ000040')
 #sink()
 
-sink(paste0(result.folder,'SH600684','tnx.txt'))
-getTxns(Portfolio=multi.trend, Symbol='SH600684')
-sink()
-
-sink(paste0(result.folder,'SH600684order.txt'))
+sink(paste0(result.folder,'SH600684','order.txt'))
 getOrderBook(multi.trend)
 sink()
 
-write.csv(x=mktdata, file=paste0(result.folder,'mktdata.csv'), row.names = TRUE)
+sink(paste0(result.folder,'SH600684','tnx.txt'))
+tstats <- getTxns(Portfolio=multi.trend, Symbol='SH600684')
+sink()
 
+#查看transaction 历史
+sink(paste0(result.folder,'SH600684','statistic.txt'))
+t(tradeStats(multi.trend))
+sink()
 
+sink(paste0(result.folder,'SH600684','trade.txt'))
+perTradeStats(multi.trend)
+sink()
 
+write.csv(x=mktdata, file=paste0(result.folder,'SH600684','mktdata.csv'), row.names = TRUE)
 
+sink(paste0(result.folder,'account.txt'))
+getAccount(multi.trend)
+sink()
 
 
 
