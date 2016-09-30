@@ -58,17 +58,19 @@ public class CleanTool
         {
             System.out.println("train file:" + file.getFileName());
             readFileByLines(file);
-        }
-        System.out.println("max file date:" + maxRows.size());
-        LogError.getLogger().info("max file date:" + maxRows.size());
-        fullMissingData(files);
-        
-//        AdjustedData(files);
-        for (FileStock file : files)
-        {
             System.out.println("write file:" + file.getFileName());
             writeToFile(file);
         }
+//        System.out.println("max file date:" + maxRows.size());
+//        LogError.getLogger().info("max file date:" + maxRows.size());
+//        fullMissingData(files);
+        
+//        AdjustedData(files);
+//        for (FileStock file : files)
+//        {
+//            System.out.println("write file:" + file.getFileName());
+//            writeToFile(file);
+//        }
         System.out.println("finish cleanup data");
     }
 
