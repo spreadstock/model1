@@ -49,11 +49,12 @@ isGainolumeRuleLastDays<- function(stock, latestDay=3, multipler=1.8)
 
 #################################################################
 #短期均线（5,10,20）在年线以上250.
+skipIfNewStock <- TRUE
 isShorternMAOverLongTermMARule<- function(stock, latestDay=1)
 {
-  if(nrow(stock) < 251)
+  if(nrow(stock) < 251 && skipIfNewStock)
   {
-    return (FALSE)
+    return (TRUE)
   }
   MA<-Cl(stock)
   MA$SMA250 <- SMA(Cl(stock),250)
@@ -135,6 +136,7 @@ getPrintMatchStocks <- function(stock.folder){
   return (printResult[-1])  
 } 
 
+#source.folder <- 'C:/Users/exubixu/Desktop/Imp/git_new/model1/'
 #source(paste0(source.folder,"commonPackages.r"))
 #stock.folder <- 'C:/Users/exubixu/Desktop/Imp/git_new/model1/StockDatas/2016-08-09-Later_Rehabilitation_Cleaned/'
 #mySelected <- getTrendMatchStocks(stock.folder)
