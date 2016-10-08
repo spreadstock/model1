@@ -101,13 +101,13 @@ getPaired <- function(portfolio, x)
 #return, N/A
 setupPairsGlobals <- function(portfolio, x, lvls=1)
 {
-  pairs <- matrix(ncol=4)
+  pairs <- matrix(ncol=6)
   
   for (aItem in 1:nrow(x)) {
-    aPair <- c(x[aItem,1],x[aItem,2],lvls,0)
+    aPair <- c(x[aItem,1],x[aItem,2],lvls,0,"1016-01-01",0)
     pairs <- rbind(pairs,aPair)
   }
-  colnames(pairs) <- c("Stock1", "Stock2", "lvls","direction")
+  colnames(pairs) <- c("Stock1", "Stock2", "lvls","direction","Timestamp","Stock2Qty")
   pairs<- pairs[-1,,drop=FALSE]
   .blotter[[paste('portfolio', portfolio, sep='.')]]$pairs <- pairs
 }
@@ -152,6 +152,47 @@ getPairDirection <- function(portfolio, x)
   return (as.numeric(qty))
 }
 
+#set pair qty of pair stocks
+#protfolio
+#x, a stock symbol
+#qty
+#return, N/A
+setPairQty <- function(portfolio, x, timestamp, qty)
+{
+  
+  pairs <- .blotter[[paste('portfolio', portfolio, sep='.')]]$pairs
+  
+  if (x %in% pairs[,1]) {
+
+  } else if (x %in% pairs[,2]) {
+    .blotter[[paste('portfolio', portfolio, sep='.')]]$pairs[x == pairs[,2],"Stock2Qty"] <- qty
+    .blotter[[paste('portfolio', portfolio, sep='.')]]$pairs[x == pairs[,2],"Timestamp"] <- as.character(timestamp)
+  } else {
+    print(paste("Warning! stock is no pair ", x))
+  }
+}
+
+#get pair qty from pair stocks
+#protfolio
+#x, a stock symbol
+#return, qty
+getPairQty <- function(portfolio, x)
+{
+  pairs <- .blotter[[paste('portfolio', portfolio, sep='.')]]$pairs
+  
+  qty <- 0
+  
+  if (x %in% pairs[,1]) {
+    return(c("2016-01-01","0"))
+  } else if (x %in% pairs[,2]) {
+    qty <- as.character(.blotter[[paste('portfolio', portfolio, sep='.')]]$pairs[x == pairs[,2],"Stock2Qty"])
+    timestamp <- as.character(.blotter[[paste('portfolio', portfolio, sep='.')]]$pairs[x == pairs[,2],"Timestamp"])
+  } else {
+    print(paste("Warning! stock is no pair ", x))
+  }
+  return (cbind(timestamp,qty))
+}
+
 
 #get lvls from pair stocks
 #protfolio
@@ -173,68 +214,38 @@ getPairLvls <- function(portfolio, x)
   return (as.numeric(lvls))
 }
 
-calculate_totalbetaV3 <- function(x, dx) {
-  lastPoint <- 1
-  xx <- x
-  xx[1,2] <- NA
-  num <- nrow(xx)
-  for (aItem in 2:num) {
-    if (is.na(xx[lastPoint,1])) {
-      xx[aItem,2] <- NA
-    } else {
-      spread <- round(dx[aItem,2] - dx[aItem,1] * coredata(xx[lastPoint,1]), 5)
-      xx[aItem,2] <- spread
-    }
-    lastPoint <- aItem
-    
-  }
-  return (xx)
-}
 
-calculate_totalbeta <- function(x, threshold) {
-  lastPoint <- 1
-  xx <- na.fill(x,0)
-  num <- nrow(xx)
-  checkPoint1 <- threshold
-  checkPoint2 <- -threshold
-  for (aItem in 2:num) {
-    aValue <- coredata(xx[aItem,1]) - coredata(xx[lastPoint,1])
-    xx[aItem,2] <- aValue
-    if ((aValue > checkPoint1) | (aValue < checkPoint2) ) {
-      lastPoint <- aItem
-    }
-  }
-  return (xx)
-}
 
 
 calculate_betaforTrend <- function(x, currentStockName) {
-  
-  lookBack <- 30
   aStock <- word(currentStockName,sep=fixed("."))
   pairedStock <- getPaired(multi.trend, aStock)
   if (is.null(pairedStock)) {
-    return
+    returnBeta <- rep(0,nrow(x))
+    returnBeta <- cbind(returnBeta, 0,1,-1)
   } else {
     stockData <- x[,paste(pairedStock["Stock1"], 'Close', sep=".")]
     stockData <- cbind(stockData,x[,paste(pairedStock["Stock2"], 'Close', sep=".")])
+    #V1
+    #estimatedBeta <- calculate_spreadV1(stockData, 0.075)
+    #returnBeta <- estimatedBeta[,c(1,2,3,4,5)]
+    #V2
+    estimatedBeta <- calculate_spreadV2(stockData, 0.5)
+    returnBeta <- estimatedBeta[,c(1,2,3,4,5)]
+    #V3
+    #estimatedBeta <- calculate_spreadV3(stockData, 1.2)
+    #returnBeta <- estimatedBeta[,c(1,3,4,5,6)]
+    #V5
+    #estimatedBeta <- calculate_spreadV5(stockData, 1)
+    #returnBeta <- estimatedBeta[,c(1,2,4,5,6)]
+    #V5.1
+    #estimatedBeta <- calculate_spreadV5_1(stockData, 0.5, 1)
+    #returnBeta <- estimatedBeta[,c(1,4,5,6,7)]
+    
   }
   
-  dx <- na.omit(stockData)
-  beta<-round(dx[,2] / dx[,1],5)
-  #beta <- lag(beta,1) #no need lag, because the platform already delay 1 day
-  #beta_total <- calculate_totalbeta(cbind(beta, 0), 0.075)
-  #beta <- cbind(beta_total, 0.075, -0.075)
-  
-  beta_total <- calculate_totalbetaV3(cbind(beta, 0),dx)
-  movingAvg = calcuateSMA(beta_total[,2],lookBack) #Moving average
-  movingStd = runSD(beta_total[,2],lookBack, sample=FALSE) #Moving standard deviation / bollinger bands
-  spreadUpper <- movingAvg + 1.5 * movingStd
-  spreadLower <- movingAvg - 1.5 * movingStd
-  beta <- cbind(beta_total, spreadUpper, spreadLower)
-  
-  colnames(beta) <- c("Beta","BetaTotal","Upper", "Lower")
-  return (beta) 
+  colnames(returnBeta) <- c("Beta","Beta0","BetaTotal","Upper", "Lower")
+  return (returnBeta) 
 }
 
 #setup pair execution env, including indicator/signals etc
@@ -308,7 +319,8 @@ setupPairsSignals <- function(portfolio,stockData)
       TxnFees="takeTranxFee",
       osFUN = 'osSpreadForTrend',
       ordersidetype = 'upperAdj',
-      portfolioName = portfolio
+      portfolioName = portfolio,
+      marketTime = quote(index(stockData))
     ),
     type = 'enter'
   )
@@ -326,14 +338,15 @@ setupPairsSignals <- function(portfolio,stockData)
       TxnFees="takeTranxFee",
       osFUN = 'osSpreadForTrend',
       ordersidetype = 'lowerAdj',
-      portfolioName = portfolio
+      portfolioName = portfolio,
+      marketTime = quote(index(stockData))
     ),
     type = 'enter'
   )
 }
 
 osSpreadForTrend <- function (data, timestamp, ordertype, orderside, 
-                              portfolio, symbol, ruletype, ..., orderprice, ordersidetype) {
+                              portfolio, symbol, ruletype, ..., orderprice, ordersidetype, marketTime) {
   portfolioName <- portfolio
   portf <- getPortfolio(portfolio)
   
@@ -342,20 +355,32 @@ osSpreadForTrend <- function (data, timestamp, ordertype, orderside,
   if (is.null(thePair))
     return (0)
   
+  pairLocation <- which(thePair==symbol)
+
   currentQtyA <- getPosQty(portfolio, thePair[1], timestamp)
   currentQtyB <- getPosQty(portfolio, thePair[2], timestamp)
-  
-  if ((currentQtyA == 0 ) | (currentQtyB == 0)) {
+  if (pairLocation == 1) {
+    timedQty <- getPairQty(portfolio,thePair[2])
+    if (timedQty[1] != "1016-01-01") {
+      nextTimestampIndex <- which(marketTime==timedQty[1])
+      nextTimestamp <- marketTime[nextTimestampIndex+1]
+      if (nextTimestamp == timestamp)
+        currentQtyB <- currentQtyB + as.numeric(timedQty[2])
+    
+    }
+  }
+    
+ if ((currentQtyA == 0 ) | (currentQtyB == 0)) {
     return (0)
   }
   
   transDirection <- getPairDirection(portfolioName, symbol)
   
   
-  pairLocation <- which(thePair==symbol)
+
 
   
-  beta <-  mktdata[,"Beta.SPREAD"]
+  beta <-  mktdata[,"Beta0.SPREAD"]
   ratio <- as.numeric(coredata(beta[timestamp]))
   #print(ratio)
   
@@ -364,45 +389,49 @@ osSpreadForTrend <- function (data, timestamp, ordertype, orderside,
       # reject transaction for dup direction
       qty <- 0
     } else {
+      #sell spread
+      # amount decided by the stock 2
       qtyB <- floor(currentQtyB / lvls)
-      qtyA <- floor(qtyB * ratio)
       if (pairLocation == 1) {
-        qty <- qtyA
+        qty <- floor(qtyB * ratio)
       } else {
         qty <- -qtyB
         if (qty != 0)
           setPairDirection(portfolioName,symbol,1)
-        
-      }
+      }      
     }
-    
-  } else if (ordersidetype == "lowerAdj") {   
+  
+  } else if (ordersidetype == "lowerAdj") {  
     if (transDirection == -1) {
       # reject transaction for dup direction
       qty <- 0
     } else {
+      #buy spread
+      # amount decided by the stock 1
       qtyA <- floor(currentQtyA / lvls)
-      qtyB <- floor(qtyA / ratio)
       if (pairLocation == 1) {
         qty <- -qtyA
+        
       } else {
+        qtyB <- floor(qtyA / ratio)
         qty <- qtyB
         if (qty != 0)
           setPairDirection(portfolioName,symbol,-1)
-      }
-      }
-      
+      }      
+    }
+
   } else {
     qty <- 0
   }
   
-
+  
+  setPairQty(portfolioName,symbol,timestamp,qty)
   orderqty <- qty
   return(orderqty) 
 }
 
 osSpreadMaxDollar <- function(data, timestamp, orderqty, ordertype, orderside,
-                              portfolio, symbol, prefer="Open", tradeSize,
+                              portfolio, symbol, prefer="Open",
                               maxSize, integerQty=TRUE,
                               ...) {
   portfolioName <- portfolio
@@ -427,34 +456,108 @@ osSpreadMaxDollar <- function(data, timestamp, orderqty, ordertype, orderside,
       price <- as.numeric(Op(data[timestamp,]))
     }
     if (pairLocation == 1) {
+      if (posStock1 > 0)
+        return (0)
       priceOther <- price * ratio
-    } else {
+      if (posStock1 == 0 & posStock2 == 0) {
+        remainValue <- maxSize / 2
+      } else
+        remainValue <- maxSize - posStock2 * priceOther
+    } else if (pairLocation == 2)  {
+      if (posStock2 > 0)
+        return (0)
       priceOther <- price / ratio
+      if (posStock1 == 0 & posStock2 == 0) {
+        remainValue <- maxSize / 2
+      } else
+        remainValue <- maxSize - posStock1 * priceOther
     }
-    
-    totalPosValue <- posStock1 * price + posStock2 * priceOther
-    remainValue <- (maxSize - totalPosValue) / 2
     
     #posVal <- pos*price
-    if (orderside=="short") {
-      dollarsToTransact <- max(tradeSize, maxSize-posVal)
-      #If our position is profitable, we don't want to cover needlessly.
-      if(dollarsToTransact > 0) {dollarsToTransact=0}
-    } else {
-      dollarsToTransact <- min(tradeSize, remainValue)
-      #If our position is profitable, we don't want to sell needlessly.
-      if(dollarsToTransact < 0) {dollarsToTransact=0}
-    }
+    dollarsToTransact <- remainValue
+    #If our position is profitable, we don't want to sell needlessly.
+    if(dollarsToTransact < 0) {dollarsToTransact=0}
+
     qty <- dollarsToTransact/price
     if(integerQty) {
       qty <- trunc(qty)
     }
-    return(qty)    
+    if (qty > 0)
+      setPairQty(portfolioName,symbol,timestamp,qty)
+    return(qty)     
   }
   
 }
 
-ruleReblance <- function (..., portfolio, symbol, timestamp) 
+reblanceImp <- function (strategy, portfolios, mktdata = NULL, parameters = NULL, 
+                         ..., verbose = TRUE, symbols = NULL, initStrat = FALSE, updateStrat = FALSE) 
 {
-  return (1)
+  
+  ret <- list()
+  if (!is.strategy(strategy)) {
+    s <- try(getStrategy(strategy))
+    if (inherits(s, "try-error")) 
+      stop("You must supply an object of type 'strategy'.")
+  }
+  else {
+    s <- strategy
+  }
+  
+  if (missing(mktdata)) 
+    load.mktdata = TRUE
+  else load.mktdata = FALSE
+  
+  for (portfolio in portfolios) {
+    if (isTRUE(initStrat)) 
+      initStrategy(strategy = s, portfolio, symbols, ... = ...)
+    ret[[portfolio]] <- list()
+    pobj <- getPortfolio(portfolio)
+    symbols <- ls(pobj$symbols)
+    st <- new.env()
+    plist <- list()
+    for (symbol in symbols) {
+      sret <- list()
+      if (isTRUE(load.mktdata)) 
+        mktdata <- get(symbol)
+      
+      sret$indicators <- applyIndicators(strategy = s, 
+                                         mktdata = mktdata, parameters = parameters, ...)
+      if (inherits(sret$indicators, "xts") & nrow(mktdata) == 
+          nrow(sret$indicators)) {
+        mktdata <- sret$indicators
+      }
+      sret$signals <- applySignals(strategy = s, mktdata = mktdata, 
+                                   sret$indicators, parameters = parameters, ...)
+      if (inherits(sret$signals, "xts") & nrow(mktdata) == 
+          nrow(sret$signals)) {
+        mktdata <- sret$signals
+      }
+      assign(symbol, mktdata, pos = st)
+      sret$rules <- list()
+      ret[[portfolio]][[symbol]] <- sret
+    }
+    
+    pindex <- as.POSIXct(index(mktdata))
+    for (i in 2:length(pindex)) {
+      for (symbol in symbols) {
+        mktdata <- get(symbol, pos = st)
+        md_subset <- mktdata[pindex[i -1], ]
+        sret$rules$pathdep <- rbind(sret$rules$pathdep, 
+                                    applyRules(portfolio = portfolio, symbol = symbol, 
+                                               strategy = s, mktdata = md_subset, Dates = NULL, 
+                                               indicators = sret$indicators, signals = sret$signals, 
+                                               parameters = parameters, ..., path.dep = TRUE))
+        # ruleProc(s$rules$rebalance, timestamp = pindex[i], 
+        #          path.dep = TRUE, ruletype = "rebalance", 
+        #          ..., mktdata = md_subset, parameters = parameters, 
+        #          portfolio = portfolio, symbol = symbol)
+        #print(paste("reblance",symbol,index(md_subset)))
+      }
+    }
+    if (isTRUE(updateStrat)) 
+      updateStrategy(s, portfolio, Symbols = symbols, ... = ...)
+    
+  }
+  if (verbose) 
+    return(ret)
 }

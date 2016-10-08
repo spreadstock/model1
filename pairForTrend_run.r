@@ -11,21 +11,21 @@ suppressWarnings(rm(list = ls(envir = .blotter), envir = .blotter))
 suppressWarnings(rm(list = ls(envir = .strategy), envir = .strategy))
 
 initDate <- '2012-01-01'
-startDate <- '2012-01-02'
-endDate <- '2014-09-30'
+startDate <- '2013-01-01'
+endDate <- '2014-12-31'
 initEq <- 1e5
 
 MaxPos <- 35000  #max position in stockA; 
 # max position in stock B will be max * ratio, i.e. no hard position limit in 
 # Stock B
-lvls <- 4 #how many times to fade; Each order's qty will = MaxPos/lvls
+lvls <- 3 #how many times to fade; Each order's qty will = MaxPos/lvls
 
 clustering.folder <- "C:/important/ideas/stock/projects/model1/testResult/testRel/"
 clustering.name <- "clusteringResult_bk"
-stock.folder <- 'C:/important/ideas/stock/projects/model1/StockDatas/2016-08-09-Later_Rehabilitation_Cleaned/'
+stock.folder <- 'C:/important/ideas/stock/projects/model1/StockDatas/2016-08-09-Former_Rehabilitation_leaned/'
 #symbList = c("SH600298","SH600037","SH601908")#for testing
 #symbList = c("SH600097","SH600183","SH600303","SH600697","SH601007","SZ000029","SZ000040","SZ000043","SZ000505","SZ000538","SZ002409")#for testing
-symbList = c("SZ000040")#for testing
+symbList = c("SH600353")#for testing
 #generated result example,
 #global data
 #Stock1     Stock2     lvls direction
@@ -78,6 +78,8 @@ setupPairsGlobals(multi.trend, na.omit(pairList),lvls)
 alvls <- getPairLvls(multi.trend, "SZ002123")
 adir <- getPairDirection(multi.trend, "SH600037")
 aPair <- getPaired(multi.trend,"SZ002123")
+#setPairQty(multi.trend,"SZ002585","2013-08-02",100)
+qty <- getPairQty(multi.trend,"SZ002585")
 ### extra test end
 
 ### this long rule only for testing
@@ -136,7 +138,6 @@ add.rule(
     prefer = 'Open',
     TxnFees="takeTranxFee",
     osFUN = 'osSpreadMaxDollar',
-    tradeSize = floor(MaxPos / 2 / lvls),
     maxSize = floor(MaxPos)
   ),
   type = 'enter',
@@ -144,11 +145,6 @@ add.rule(
 )
 ### this long rule only for testing End
 
-add.rule(multi.trend, 'ruleReblance',
-         arguments=list(rebalance_on='days'),
-         type='rebalance',
-         label='rebalance'
-)
 
 setupPairsSignals(multi.trend, stockData)
 

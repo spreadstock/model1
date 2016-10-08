@@ -9,6 +9,12 @@ library(tseries)
 library(devtools)
 library(IKTrading)
 library(PerformanceAnalytics)
+library(psych)
+library(parallel)
+library(vrtest)
+library(urca)
+library(dlm)
+
 
 #writeStock write processed result into a csv file
 #Example, 

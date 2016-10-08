@@ -47,6 +47,30 @@ calculate_betaV2 <- function(dx, width) {
   return (beta)
 }
 
+calculate_totalbetaV6 <- function (dx) {
+  x<-dx[,1]
+  y<-dx[,2]
+  n<-length(x)
+  mod <- dlmModReg(x)
+  diag(C0(mod)) <- c(1E-16, 1E-16)
+  V(mod) <- 0.001
+  delta <- 0.008
+  diag(W(mod)) <- delta/(1-delta)
+  filtered <- dlmFilter(y,mod)
+  returnBeta <- xts(filtered$m[-1,2],index(x))
+  intercept <- xts(filtered$m[-1,1],index(x))
+  predR <- dlmSvd2var(filtered$U.R, filtered$D.R)
+  X <- cbind(1,x)
+  predQ <- sqrt(sapply(1:n,function(i){X[i,]%*%predR[[i]]%*%t(X[i,]) + mod$V}))
+  predE <- y - xts(filtered$f, index(x))
+  upper <- 1.0 * predQ
+  lower <- 1.0 * -predQ
+  returnBeta <- cbind(returnBeta,intercept, predE,upper,lower)
+  returnBeta[1:5,3] <- 0
+  #return(returnBeta[-1:-5,])
+  return(returnBeta)
+}
+
 calculate_totalbetaV4 <- function(x, dx) {
   lastPoint <- 1
   returns <-calcuateSimpleReturn(dx)
@@ -63,6 +87,26 @@ calculate_totalbetaV4 <- function(x, dx) {
     }
     lastPoint <- aItem
     
+  }
+  return (xx)
+}
+
+calculate_totalbetaV5 <- function(x, dx) {
+  lastPoint <- 1
+  lastBeta <- NA
+  xx <- x
+  xx[1,3] <- NA
+  num <- nrow(xx)
+  for (aItem in 2:num) {
+    if (is.na(lastBeta)) {
+      xx[aItem,3] <- NA
+    } else {
+      spread <- round(dx[aItem,2] - dx[aItem,1] * coredata(lastBeta), 5)
+      xx[aItem,3] <- spread
+    }
+    lastPoint <- aItem
+    if (!is.na(xx[lastPoint,2]) & xx[lastPoint,2] != 0)
+      lastBeta <- xx[lastPoint,2]
   }
   return (xx)
 }
@@ -118,8 +162,6 @@ calculate_totalbeta <- function(x, threshold, dx) {
     for (aItem in 2:num) {
       aValue <- coredata(xx[aItem,1]) - coredata(xx[lastPoint,1])
       xx[aItem,2] <- aValue
-      #spread <- round(dx[aItem,2] - dx[aItem,1] * coredata(xx[lastPoint,1]), 5)
-      #xx[aItem,2] <- spread
       if ((aValue > checkPoint1) | (aValue < checkPoint2) ) {
         lastPoint <- aItem
       }
@@ -146,18 +188,56 @@ calculate_beta <- function(x) {
   #beta_total <- calculate_totalbeta(cbind(beta, 0), 0.075,dx)#for another pair
   #beta_total <- calculate_totalbetaV2(cbind(beta, 0), 1,dx)
   #beta_total <- calculate_totalbetaV3(cbind(beta, 0),dx)
-  beta_total <- calculate_totalbetaV4(cbind(beta, 0),dx)
+  #beta_total <- calculate_totalbetaV4(cbind(beta, 0),dx)
 
-  movingAvg = calcuateSMA(beta_total[,2],lookBack) #Moving average
-  movingStd = runSD(beta_total[,2],lookBack, sample=FALSE) #Moving standard deviation / bollinger bands
-  spreadUpper <- movingAvg + 2.5 * movingStd
-  spreadLower <- movingAvg - 2.5 * movingStd
+  #movingAvg = calcuateSMA(beta_total[,2],lookBack) #Moving average
+  #movingStd = runSD(beta_total[,2],lookBack, sample=FALSE) #Moving standard deviation / bollinger bands
+  #spreadUpper <- movingAvg + 2.5 * movingStd
+  #spreadLower <- movingAvg - 2.5 * movingStd
   #beta <- cbind(beta_total, 1, -1)
   #beta <- cbind(beta_total, 0.075, -0.075) #for another pair
-  beta <- cbind(beta_total, spreadUpper, spreadLower)
+  #beta <- cbind(beta_total, spreadUpper, spreadLower)
 
   #colnames(beta) <- c("Beta","BetaTotal","Upper", "Lower")
-  colnames(beta) <- c("Beta","BetaTotal","BetaReturn", "Upper", "Lower")
+  #colnames(beta) <- c("Beta","BetaTotal","BetaReturn", "Upper", "Lower")
+  
+  
+  #V5
+  #need calcuate ZScore for Beta first
+  #movingAvgBeta = calcuateSMA(beta,lookBack) #Moving average
+  #movingStdBeta = runSD(beta,lookBack, sample=FALSE) #Moving standard deviation / bollinger bands
+  #betaUpper <- movingAvgBeta + 1.5 * movingStdBeta
+  #betaLower <- movingAvgBeta - 1.5 * movingStdBeta
+  #newBeta <- ifelse (beta > betaUpper | beta < betaLower ,0, beta)
+  #beta <- cbind(beta, newBeta,betaUpper, betaLower)
+  #lastBeta <- NA 
+  #for (aBeta in 1:nrow(beta)) {
+  #  if (is.na(beta[aBeta,2])) {
+  #    
+  #  } else if (beta[aBeta,2] != 0) {
+  #    lastBeta <- beta[aBeta,2]
+  #  } else {
+  #    beta[aBeta,2] <- lastBeta
+  #  }
+  #
+  #}
+  
+  beta <- cbind(beta,beta)
+  beta_total <- calculate_totalbetaV5(cbind(beta, 0),dx)
+  movingAvg = calcuateSMA(beta_total[,3],lookBack) #Moving average
+  movingStd = runSD(beta_total[,3],lookBack, sample=FALSE) #Moving standard deviation / bollinger bands
+  spreadUpper <- movingAvg + 1.5 * movingStd
+  spreadLower <- movingAvg - 1.5 * movingStd
+  beta <- cbind(beta_total, spreadUpper, spreadLower)
+  
+  
+  colnames(beta) <- c("Beta","newBeta","BetaTotal","Upper", "Lower")
+  #colnames(beta) <- c("Beta","newBeta","Upper", "Lower")
+  
+  #V6
+  #beta <- calculate_totalbetaV6(dx)
+  #colnames(beta) <- c("Beta","intercept","BetaTotal","Upper", "Lower")
+  
   return (beta) 
 }
 
@@ -529,6 +609,63 @@ osSpreadMaxPos <- function (data, timestamp, ordertype, orderside,
 }
 
 
+osSpreadMaxDollarV2 <- function(data, timestamp, orderqty, ordertype, orderside,
+                              portfolio, symbol, prefer="Open", tradeSize,
+                              maxSize, integerQty=TRUE,
+                              ...) {
+  portf <- getPortfolio(portfolio)
+  symbol1 <- names(portf$pair[1])
+  symbol2 <- names(portf$pair[2])
+  beta <-  mktdata[,"Beta.SPREAD"]
+  ratio <- as.numeric(coredata(beta[timestamp]))
+  if (ratio == 0 ) {
+    #to do
+    return (0)
+  } else {
+    posStock1 <- getPosQty(portfolio, symbol1, timestamp)
+    posStock2 <- getPosQty(portfolio, symbol2, timestamp)
+    
+    if(prefer=="Close") {
+      price <- as.numeric(Cl(data[timestamp,]))
+    } else {
+      price <- as.numeric(Op(data[timestamp,]))
+    }
+    if (portf$pair[symbol] == 1) {
+      priceOther <- price * ratio
+      currentPos <- posStock1
+    } else {
+      priceOther <- price / ratio
+      currentPos <- posStock2
+    }
+    
+    if ((posStock1 > 0 ) & (posStock2 > 0)) {
+      remainValue <- 0
+    } else if (posStock1 == 0 & posStock2 == 0) {
+      remainValue <- maxSize / 2
+    } else {
+      totalPosValue <- posStock1 * price + posStock2 * priceOther
+      remainValue <- maxSize - totalPosValue
+    }
+    
+    #posVal <- pos*price
+    if (orderside=="short") {
+      dollarsToTransact <- max(tradeSize, maxSize-posVal)
+      #If our position is profitable, we don't want to cover needlessly.
+      if(dollarsToTransact > 0) {dollarsToTransact=0}
+    } else {
+        dollarsToTransact <- remainValue
+        #If our position is profitable, we don't want to sell needlessly.
+        if(dollarsToTransact < 0) {dollarsToTransact=0}
+    }
+    qty <- dollarsToTransact/price
+    if(integerQty) {
+      qty <- trunc(qty)
+    }
+    return(qty)    
+  }
+  
+}
+
 osSpreadMaxDollar <- function(data, timestamp, orderqty, ordertype, orderside,
                           portfolio, symbol, prefer="Open", tradeSize,
                           maxSize, integerQty=TRUE,
@@ -557,7 +694,7 @@ osSpreadMaxDollar <- function(data, timestamp, orderqty, ordertype, orderside,
     }
     
     totalPosValue <- posStock1 * price + posStock2 * priceOther
-    remainValue <- (maxSize - totalPosValue) / 2
+    remainValue <- maxSize - totalPosValue
     
     #posVal <- pos*price
     if (orderside=="short") {
@@ -580,7 +717,82 @@ osSpreadMaxDollar <- function(data, timestamp, orderqty, ordertype, orderside,
 
 ruleReblance <- function (..., portfolio, symbol, timestamp) 
 {
+  print(paste("reblance",symbol,timestamp))
   return (1)
+}
+
+
+reblanceImp <- function (strategy, portfolios, mktdata = NULL, parameters = NULL, 
+                         ..., verbose = TRUE, symbols = NULL, initStrat = FALSE, updateStrat = FALSE) 
+{
+
+  ret <- list()
+  if (!is.strategy(strategy)) {
+    s <- try(getStrategy(strategy))
+    if (inherits(s, "try-error")) 
+      stop("You must supply an object of type 'strategy'.")
+  }
+  else {
+    s <- strategy
+  }
+  
+  if (missing(mktdata)) 
+    load.mktdata = TRUE
+  else load.mktdata = FALSE
+  
+  for (portfolio in portfolios) {
+    if (isTRUE(initStrat)) 
+      initStrategy(strategy = s, portfolio, symbols, ... = ...)
+    ret[[portfolio]] <- list()
+    pobj <- getPortfolio(portfolio)
+    symbols <- ls(pobj$symbols)
+    st <- new.env()
+    plist <- list()
+    for (symbol in symbols) {
+      sret <- list()
+      if (isTRUE(load.mktdata)) 
+        mktdata <- get(symbol)
+      
+      sret$indicators <- applyIndicators(strategy = s, 
+                                         mktdata = mktdata, parameters = parameters, ...)
+      if (inherits(sret$indicators, "xts") & nrow(mktdata) == 
+          nrow(sret$indicators)) {
+        mktdata <- sret$indicators
+      }
+      sret$signals <- applySignals(strategy = s, mktdata = mktdata, 
+                                   sret$indicators, parameters = parameters, ...)
+      if (inherits(sret$signals, "xts") & nrow(mktdata) == 
+          nrow(sret$signals)) {
+        mktdata <- sret$signals
+      }
+      assign(symbol, mktdata, pos = st)
+      sret$rules <- list()
+      ret[[portfolio]][[symbol]] <- sret
+    }
+    
+    pindex <- as.POSIXct(index(mktdata))
+    for (i in 1:length(pindex)) {
+      for (symbol in symbols) {
+        mktdata <- get(symbol, pos = st)
+        md_subset <- mktdata[pindex[i], ]
+        sret$rules$pathdep <- rbind(sret$rules$pathdep, 
+                                    applyRules(portfolio = portfolio, symbol = symbol, 
+                                               strategy = s, mktdata = md_subset, Dates = NULL, 
+                                               indicators = sret$indicators, signals = sret$signals, 
+                                               parameters = parameters, ..., path.dep = TRUE))
+        # ruleProc(s$rules$rebalance, timestamp = pindex[i], 
+        #          path.dep = TRUE, ruletype = "rebalance", 
+        #          ..., mktdata = md_subset, parameters = parameters, 
+        #          portfolio = portfolio, symbol = symbol)
+        #print(paste("reblance",symbol,index(md_subset)))
+      }
+    }
+    if (isTRUE(updateStrat)) 
+      updateStrategy(s, portfolio, Symbols = symbols, ... = ...)
+    
+  }
+  if (verbose) 
+    return(ret)
 }
 
 osSpreadSize <- function (data, timestamp, ordertype, orderside, 
@@ -603,25 +815,28 @@ osSpreadSize <- function (data, timestamp, ordertype, orderside,
   posStock1 <- getPosQty(portfolio, symbol1, timestamp)
   posStock2 <- getPosQty(portfolio, symbol2, timestamp)
   
+  if ((posStock1 == 0 ) | (posStock2 == 0)) {
+    return (0)
+  }
   
   if (ordersidetype == "upperAdj") {
+    #sell spread
+    # amount decided by the stock 2
+    qtyB <- floor(posStock2 / lvls)
     if (portf$pair[symbol] == 1) {
-      #calcuate value based on the other side
-        qtyB <- floor(posStock2 / lvls)
-        qtyA <- floor(qtyB * ratio)
-        qty <- qtyA
+        qty <- floor(qtyB * ratio)
     } else {
-      qtyB <- -floor(posStock2 / lvls)
-      qty <- qtyB
+      qty <- -qtyB
       
     }  
-  } else if (ordersidetype == "lowerAdj") {    
+  } else if (ordersidetype == "lowerAdj") {  
+    #buy spread
+    # amount decided by the stock 1
+    qtyA <- floor(posStock1 / lvls)
     if (portf$pair[symbol] == 1) {
-      qtyA <- -floor(posStock1 / lvls)
-      qty <- qtyA
+      qty <- -qtyA
 
     } else {
-      qtyA <- floor(posStock1 / lvls)
       qtyB <- floor(qtyA / ratio)
       qty <- qtyB
     }
@@ -1034,10 +1249,10 @@ end_date2 <- "2014-12-31"
 
 # #stock_daily <- loadDailyClose(start_date=start_date2, end_date=end_date2, symbList = c("SH600391" ,"SZ000738"))
 #stock_daily <- loadDailyClose(start_date=start_date2, end_date=end_date2, symbList = c("SH601169" ,"SH601328"))
-#stock_daily <- loadDailyClose(start_date=start_date2, end_date=end_date2, symbList = c("SH600353" ,"SZ002123"))
+stock_daily <- loadDailyClose(start_date=start_date2, end_date=end_date2, symbList = c("SH600353" ,"SZ002123"))
 #yy <-rollingV2_1(x=stock_daily, width=10, FUN=calculate_spread, PREFUN=calcuateSimpleReturn)
 # <-rollingV2_1(x=stock_daily, width=10, FUN=calculate_spread, PREFUN=calcuateAbsPrice)
-#yy<- calculate_beta(stock_daily)
+yy<- calculate_beta(stock_daily)
 
 #betaZZ <- cumsum(na.omit(yy$Beta))
 #betaZZ <- yy$Beta / betaZZ
