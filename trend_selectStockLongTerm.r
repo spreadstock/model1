@@ -128,11 +128,11 @@ matchVolumGrowRule<- function(stock, backDate=20, pct=0.3)
   
 }
 
-#股票价格在60个交易日内上涨小于25%, 60日前的交易价格小于60日高点
-matchGrowRule<- function(stock, pct=0.25, backDate=60)
+#股票价格在60个交易日内上涨小于30%, 60日最低收盘交易价格小于60日高点
+matchGrowRule<- function(stock, pct=0.3, backDate=60)
 {
   lastbackDate <- last(Cl(stock),backDate)
-  startPrice <- lastbackDate[1]
+  startPrice <- min(lastbackDate)
   maxPrice <- max(lastbackDate)
   #print(startPrice)
   #print(maxPrice)
