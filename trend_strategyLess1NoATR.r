@@ -179,22 +179,6 @@ osFixedMoneyEntry <- function(timestamp, orderqty, portfolio, symbol, ruletype, 
 }
   
 
-#加仓，当上涨0.5个ATR并且还持有股票的时候，就增加ATR follow的买入信号
-add.indicator(
-  strategy = qs.strategy,
-  name = "addGrowATRSig",
-  arguments = list(
-    x = quote(mktdata)
-  ),
-  label = "atrTrendFollow"
-)
-
-add.signal(
-  qs.strategy,
-  name = "sigThreshold",
-  arguments = list(column = "atrTrendFollow", relationship = "gt",threshold=0,cross=FALSE),
-  label = "signal.gt.atrTrendFollow")	   
-
 #加仓，如果剩余资金起始的50%
 osPercentEquity <- function(timestamp, orderqty, portfolio,symbol, ruletype,trade.percent = 0.5,...)
 {
@@ -350,24 +334,6 @@ add.rule(
 )
 
 
-#ATR tradeFollow enter
-add.rule(
-  qs.strategy,
-  name = 'ruleSignal',
-  arguments = list(
-    sigcol = "signal.gt.atrTrendFollow",
-    sigval = TRUE,
-	replace=FALSE,
-	TxnFees='getTnxFee',
-    orderqty = 100,
-    ordertype = 'market',
-	prefer='Open',
-    orderside = 'long',
-    osFUN='osPercentEquity',
-	orderset='ocolong'),
-  type = 'enter',
-  label='ATRFollowEnter'
-)
 
 #normal exit 
 add.rule(
@@ -408,27 +374,8 @@ add.rule(
 )
 
 
-add.rule(
-      qs.strategy, 
-      name = 'ruleSignal',
-	  arguments=list(
-		sigcol='signal.gt.atrTrendFollow', 
-		sigval=TRUE,
-		replace=FALSE,
-		orderside='long',
-		ordertype='stoptrailing', 
-		tmult=TRUE, 
-		threshold=quote(.stoptrailing),
-		orderqty='all',
-		orderset='ocolong'
-	),
-	type='chain', parent='ATRFollowEnter',
-	label='StopTrailingATR',
-	enabled=FALSE
-)
-
 enable.rule(qs.strategy, type="chain", label="StopTrailingLONG")
-enable.rule(qs.strategy, type="chain", label="StopTrailingATR")	
+
 
 
 #########################################
