@@ -206,12 +206,10 @@ osPercentEquity <- function(timestamp, orderqty, portfolio,symbol, ruletype,trad
 	   print(paste0("osPercentEquity:",orderqty))
 	   return (orderqty)
 	}
-	mktdata[tnxIndex]$atr
-	mktdata["2014-04-18::2014-04-18",]
 	price <- as.numeric(Op(mktdata[timestamp, ]))
-	Portfolio <- get(paste("portfolio", multi.trend, sep = "."), envir = .blotter)
-    tnxlast <- last(Portfolio$symbols[[symbol]]$txn[paste('::',timestamp,sep='')])
-	print(paste0("tnxlast:",tnxlast$Txn.Price))
+	#Portfolio <- get(paste("portfolio", multi.trend, sep = "."), envir = .blotter)
+    #tnxlast <- last(Portfolio$symbols[[symbol]]$txn[paste('::',timestamp,sep='')])
+	#print(paste0("tnxlast:",tnxlast$Txn.Price))
 	
     trading.pl <- sum(getTxns(Portfolio = portfolio, Symbol = symbol)$Txn.Value)
     trading.fee <- 0 - sum(getTxns(Portfolio = portfolio, Symbol = symbol)$Txn.Fees)
@@ -436,9 +434,9 @@ require(doParallel)
 registerDoParallel(cores=4)
 
 
-#sink(paste0(result.folder,'aa.txt'))
+sink(paste0(result.folder,'aa.txt'))
 applyStrategy(strategy=qs.strategy, portfolios=multi.trend)
-#sink()
+sink()
 
 updatePortf(multi.trend)
 updateAcct(multi.trend)

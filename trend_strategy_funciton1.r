@@ -194,8 +194,9 @@ isTrendOneUpCamel <- function(x ,targetShortGrowDay=2, targetDiffGrowDay=3, targ
 }
   
 
-#加仓，当上涨0.5个ATR并且还持有股票的时候，就增加ATR follow的买入信号
-growCertainATRIndex <- function(x, index, closeTnxPrice, atrTnxPrice, ATRRate=0.5) 
+#加仓，当close价格上涨0.5个ATR并且还持有股票的时候，就增加ATR follow的买入信号
+#ATR信号点条件1) 持仓  2)在下一次趋势购买信号之前
+growCertainATRIndex <- function(x, index, nextTnx, closeTnxPrice, atrTnxPrice, ATRRate=0.5) 
 {	
     #print(paste0("growCertainATRIndex: ",nrow(x),"  ",index))
 	if(index == nrow(x))
@@ -204,32 +205,78 @@ growCertainATRIndex <- function(x, index, closeTnxPrice, atrTnxPrice, ATRRate=0.
 	}
 	aaa <- strsplit(colnames(x)[1],"[.]")
 	symbol <- aaa[[1]][1]
-	print(paste0("growCertainATRIndex: ",symbol))
+
+
+	
 	for (i in (index+1):nrow(x))
     {
 	   diff <-(as.numeric(x[i]) - closeTnxPrice)
-	   if( diff >= atrTnxPrice)
+	   if( (diff >= atrTnxPrice) & (i < nextTnx))
 	   {
+	         print(paste0("growCertainATRIndex  diff: ",diff))
+			 print(paste0("growCertainATRIndex  i: ",i))
              return (i)
        }
     }
 	return (0)
 }
+findNextTnxIndex <- function(x, startIndex) 
+{
+  for (index in (startIndex+1):nrow(x))
+  {
+     if(isTnxIndex(x,index)) 
+     {
+          return (index)
+     }	 
+  }    
+  return (0)
+}
 
+isTnxIndex <- function(x, index) 
+{
+  corss <- TRUE
+  result <- FALSE
+  if((index-1) == 0)
+  {
+    return (result)
+  }
+  if(corss)
+  {
+    if((x[index]$X1.isvolumeUp == 1 & x[index]$X1.isOverSMA10Recently == 1 & (x[index]$X1.treat_trendGrowPlus == 1 | x[index]$X1.trendGrowMinus ==1)))
+	{
+	   previous <- index -1
+	   if(x[previous]$X1.isvolumeUp == 0 | x[previous]$X1.isOverSMA10Recently == 0 | (x[previous]$X1.treat_trendGrowPlus == 0 & x[previous]$X1.trendGrowMinus ==0))
+	   {
+	      result <- TRUE
+	   }   
+	}
+  }
+  else
+  {
+     if(x[index]$X1.isvolumeUp == 1 & x[index]$X1.isOverSMA10Recently == 1 & (x[index]$X1.treat_trendGrowPlus == 1 | x[index]$X1.trendGrowMinus ==1))
+	 {
+	   result <- TRUE
+	 }
+  }
+  return (result)
+}
 findGrowATRSig <- function(x, index, ATRRate=0.5) 
 {
 #如果符合趋势，这index+1是交易点
-     if(x[index]$X1.isvolumeUp == 1 & (x[index]$X1.treat_trendGrowPlus == 1 | x[index]$X1.trendGrowMinus ==1))  
-	 #if(x[index]$longEntry == 1) 
+     #if(x[index]$X1.isvolumeUp == 1 & (x[index]$X1.treat_trendGrowPlus == 1 | x[index]$X1.trendGrowMinus ==1))  
+	 if(isTnxIndex(x,index)) 
 	 {
 	     if(index == nrow(x))
 		 {
 		    return (0)
 		 }
 	     tnxIndex <- index+1
+		 nextTnxIndex <- findNextTnxIndex(x, tnxIndex) + 1
+	print(paste0("growCertainATRIndex  TnxIndex: ",tnxIndex))
+	print(paste0("growCertainATRIndex  nextTnxIndex: ",nextTnxIndex))		 
 		 closeTnxPrice <- as.numeric(Cl(x[tnxIndex]))
          atrTnxPrice <- (ATRRate * as.numeric(x[tnxIndex]$atr))
-		 return (growCertainATRIndex(Cl(x),index=tnxIndex,closeTnxPrice=closeTnxPrice,atrTnxPrice=atrTnxPrice))
+		 return (growCertainATRIndex(Cl(x),index=tnxIndex,nextTnx=nextTnxIndex,closeTnxPrice=closeTnxPrice,atrTnxPrice=atrTnxPrice))
 	 }
 	 
 	 else
