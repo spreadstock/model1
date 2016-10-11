@@ -315,7 +315,7 @@ getStaticInfo <- function(portfolio,symbols,result.folder)
     tab.trades$Stock.Annualized.Return  <- symbolperf[2]
     tab.trades$Annualized.Sharpe.Ratio  <- symbolperf[3]
 	  sink(paste0(result.folder,symbol,'statistic.txt'))
-    print(tab.trades)
+    print(t(tab.trades))
 	   sink()
   }
 }
