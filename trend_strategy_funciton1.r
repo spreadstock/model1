@@ -213,8 +213,8 @@ growCertainATRIndex <- function(x, index, nextTnx, closeTnxPrice, atrTnxPrice, A
 	   diff <-(as.numeric(x[i]) - closeTnxPrice)
 	   if( (diff >= atrTnxPrice) & (i < nextTnx))
 	   {
-	         print(paste0("growCertainATRIndex  diff: ",diff))
-			 print(paste0("growCertainATRIndex  i: ",i))
+	         #print(paste0("growCertainATRIndex  diff: ",diff))
+			 #print(paste0("growCertainATRIndex  i: ",i))
              return (i)
        }
     }
@@ -272,8 +272,8 @@ findGrowATRSig <- function(x, index, ATRRate=0.5)
 		 }
 	     tnxIndex <- index+1
 		 nextTnxIndex <- findNextTnxIndex(x, tnxIndex) + 1
-	print(paste0("growCertainATRIndex  TnxIndex: ",tnxIndex))
-	print(paste0("growCertainATRIndex  nextTnxIndex: ",nextTnxIndex))		 
+	#print(paste0("growCertainATRIndex  TnxIndex: ",tnxIndex))
+	#print(paste0("growCertainATRIndex  nextTnxIndex: ",nextTnxIndex))		 
 		 closeTnxPrice <- as.numeric(Cl(x[tnxIndex]))
          atrTnxPrice <- (ATRRate * as.numeric(x[tnxIndex]$atr))
 		 return (growCertainATRIndex(Cl(x),index=tnxIndex,nextTnx=nextTnxIndex,closeTnxPrice=closeTnxPrice,atrTnxPrice=atrTnxPrice))

@@ -21,8 +21,9 @@ multi.trend <- "multi.trend"
 qs.strategy <- "trend1"
 source(paste0(source.folder,"trend_strategy_funciton1.r"))
 source(paste0(source.folder,"commonPackages.r"))
+source(paste0(source.folder,"pairForTrend.r"))
 
-#symbols = c("SH600681")
+#symbols = c("SH600684")
 symbols <- listStocksFromDir(stock.folder)
 
 for(symbol in symbols) 
@@ -144,6 +145,10 @@ osFixedMoneyEntry <- function(timestamp, orderqty, portfolio, symbol, ruletype, 
   trading.pl <- sum(getTxns(Portfolio = portfolio, Symbol = symbol)$Txn.Value)
   trading.fee <- 0 - sum(getTxns(Portfolio = portfolio, Symbol = symbol)$Txn.Fees)
   total.equity <- tradeSize - trading.pl - trading.fee
+  print(paste0("osFixedMoneyEntry trading.pl:",trading.pl))
+  print(paste0("osFixedMoneyEntry trading.fee:",trading.fee))
+  print(paste0("osFixedMoneyEntry total.equity:",total.equity))
+  
   if(total.equity < 0)
   {
      orderqty <- 0
@@ -157,10 +162,11 @@ osFixedMoneyEntry <- function(timestamp, orderqty, portfolio, symbol, ruletype, 
   {
      tradeSizeNow <- total.equity
   }
-  
-  atr <- as.numeric(mktdata[timestamp,]$atr)
+  print(paste0("osFixedMoneyEntry ttradeSizeNow:",tradeSizeNow))
+  #atr <- as.numeric(mktdata[timestamp,]$atr)
+  atr <- as.numeric(get(symbol)[timestamp,]$atr)
   orderqty <- round(tradeSizeNow/atr,-2)  
-  price <- as.numeric(Cl(mktdata[timestamp, ]))
+  price <- as.numeric(Op(get(symbol)[timestamp, ]))
   atrSize <- orderqty * price
   if(tradeSizeNow < minTradeSize)
   {
@@ -170,11 +176,17 @@ osFixedMoneyEntry <- function(timestamp, orderqty, portfolio, symbol, ruletype, 
   {
     desireSize <- minTradeSize
   }
-  
+  print(paste0("osFixedMoneyEntry desireSize:",desireSize))
   if(atrSize > desireSize)
   {
 	orderqty <- round(desireSize/price,-2)
   }
+  print(paste0("osFixedMoneyEntry timestamp:",timestamp))
+  print(paste0("osFixedMoneyEntry price:",price))
+  print(paste0("osFixedMoneyEntry trading.pl:",trading.pl))
+  print(paste0("osFixedMoneyEntry orderqty:",orderqty))
+
+	
   return (orderqty)
 }
   
@@ -198,7 +210,6 @@ add.signal(
 #加仓，如果剩余资金起始的50%
 osPercentEquity <- function(timestamp, orderqty, portfolio,symbol, ruletype,trade.percent = 0.5,...)
 {
-    
     pos <- getPosQty(multi.trend, symbol, timestamp)
 	if(pos == 0)
 	{
@@ -206,7 +217,8 @@ osPercentEquity <- function(timestamp, orderqty, portfolio,symbol, ruletype,trad
 	   print(paste0("osPercentEquity:",orderqty))
 	   return (orderqty)
 	}
-	price <- as.numeric(Op(mktdata[timestamp, ]))
+	#price <- as.numeric(Op(mktdata[timestamp, ]))
+	price <- as.numeric(Op(get(symbol)[timestamp, ]))
 	#Portfolio <- get(paste("portfolio", multi.trend, sep = "."), envir = .blotter)
     #tnxlast <- last(Portfolio$symbols[[symbol]]$txn[paste('::',timestamp,sep='')])
 	#print(paste0("tnxlast:",tnxlast$Txn.Price))
@@ -215,6 +227,11 @@ osPercentEquity <- function(timestamp, orderqty, portfolio,symbol, ruletype,trad
     trading.fee <- 0 - sum(getTxns(Portfolio = portfolio, Symbol = symbol)$Txn.Fees)
     total.equity <- tradeSize - trading.pl - trading.fee	
     tradeSizeNow <- total.equity
+	print(paste0("pos:",pos))
+	print(paste0("trading.pl:",trading.pl))
+	print(paste0("trading.fee:",trading.fee))
+	print(paste0("total.equity:",total.equity))
+	
     if(total.equity < 0)
     {
 	   orderqty <- 0
@@ -230,6 +247,9 @@ osPercentEquity <- function(timestamp, orderqty, portfolio,symbol, ruletype,trad
       desireSize <- minTradeSize
     }	
     orderqty <- round(desireSize/price,-2)
+	print(paste0("here price:",price))
+	print(paste0("here timestamp:",timestamp))
+	print(paste0("here orderqty:",orderqty))
     return(orderqty)
 }
 
@@ -306,8 +326,8 @@ trade.percent=-0.004
 
 getTnxFee <- function(TxnQty, TxnPrice, Symbol)
 {
-  print(paste0("getTnxFee TxnQty:",TxnQty))
-  print(paste0("getTnxFee TxnPrice:",TxnPrice))
+  #print(paste0("getTnxFee TxnQty:",TxnQty))
+  #print(paste0("getTnxFee TxnPrice:",TxnPrice))
   qty <- abs(TxnQty)
   if(qty == 0)
   {
@@ -324,7 +344,7 @@ getTnxFee <- function(TxnQty, TxnPrice, Symbol)
     }
     fee <- round(qty * TxnPrice * trade.percent, 2) - transFeeShanghai
   }
-  print(paste0("getTnxFee fee:",fee))
+  #print(paste0("getTnxFee fee:",fee))
   return(fee)
 }
 
@@ -435,7 +455,8 @@ registerDoParallel(cores=4)
 
 
 sink(paste0(result.folder,'aa.txt'))
-applyStrategy(strategy=qs.strategy, portfolios=multi.trend)
+reblanceImp(strategy=qs.strategy, portfolios=multi.trend)
+#applyStrategy(strategy=qs.strategy, portfolios=multi.trend)
 sink()
 
 updatePortf(multi.trend)
@@ -459,7 +480,7 @@ sink(paste0(result.folder,'order.txt'))
 getOrderBook(multi.trend)
 sink()
 
-#getStaticInfo(multi.trend,symbols,result.folder,tradeSize)
+getStaticInfo(multi.trend,multi.trend,symbols,result.folder,tradeSize)
 
 
 #查看transaction 历史

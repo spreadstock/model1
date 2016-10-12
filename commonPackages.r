@@ -14,8 +14,7 @@ library(parallel)
 library(vrtest)
 library(urca)
 library(dlm)
-# library(knitr)
-# library(dplyr)
+
 
 #writeStock write processed result into a csv file
 #Example, 
@@ -265,7 +264,7 @@ takeTranxFee <- function(TxnQty, TxnPrice, Symbol,...) {
 }
 
 
-getStaticInfo <- function(portfolio,symbols,result.folder)
+getStaticInfo <- function(portfolio,account,symbols,result.folder,tradeSize=45000)
 {
   tstats <- tradeStats(portfolio)
 
@@ -278,7 +277,7 @@ getStaticInfo <- function(portfolio,symbols,result.folder)
       dplyr::mutate(Trades = Num.Trades,
   	       WinTrades = round(Num.Trades * Percent.Positive/100,0),
   	       Net.Trading.PL=Net.Trading.PL,
-  		   Net.Trading.Ratio=round(Net.Trading.PL/initEq * 100,0),
+  		   Net.Trading.Ratio=round(Net.Trading.PL/tradeSize * 100,0),
   	       Gross.Profit = Gross.Profits,
   		   Gross.Losses = Gross.Losses,
              Win.Percent = Percent.Positive,
@@ -293,11 +292,11 @@ getStaticInfo <- function(portfolio,symbols,result.folder)
       dplyr::select(Trades,WinTrades, Net.Trading.PL, Net.Trading.Ratio, Gross.Profit, Gross.Losses, Win.Percent, Loss.Percent, WL.Ratio,Profit.Factor,Largest.Winner,Largest.Winner.Date, Largest.Loser, Largest.Loser.Date,Max.Drawdown)
 
     symbolDataAll <- get(symbol)
-    clstart <- dplyr::first(Cl(symbolDataAll))
-    clend <- dplyr::last(Cl(symbolDataAll))
+    clstart <- first(Cl(symbolDataAll))
+    clend <- last(Cl(symbolDataAll))
     tab.trades$Stock.Annualized.return  <- round((clend - clstart) / clstart * 100, 0)
 
-    rets <- PortfReturns(multi.trend)
+    rets <- PortfReturns(Account=account)
     tab.perf <- table.Arbitrary(rets,
                               metrics=c(
                                   "Return.cumulative",
