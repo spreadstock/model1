@@ -14,8 +14,8 @@ library(parallel)
 library(vrtest)
 library(urca)
 library(dlm)
-library(knitr)
-library(dplyr)
+# library(knitr)
+# library(dplyr)
 
 #writeStock write processed result into a csv file
 #Example, 
@@ -268,35 +268,35 @@ takeTranxFee <- function(TxnQty, TxnPrice, Symbol,...) {
 getStaticInfo <- function(portfolio,symbols,result.folder)
 {
   tstats <- tradeStats(portfolio)
-  
-  for(symbol in symbols) 
-  { 
+
+  for(symbol in symbols)
+  {
     trades <- perTradeStats(portfolio,symbol)
     symbolStatic <- tstats[symbol,]
-  
-    tab.trades <- symbolStatic %>% 
-      dplyr::mutate(Trades = Num.Trades, 
+
+    tab.trades <- symbolStatic %>%
+      dplyr::mutate(Trades = Num.Trades,
   	       WinTrades = round(Num.Trades * Percent.Positive/100,0),
   	       Net.Trading.PL=Net.Trading.PL,
   		   Net.Trading.Ratio=round(Net.Trading.PL/initEq * 100,0),
   	       Gross.Profit = Gross.Profits,
   		   Gross.Losses = Gross.Losses,
-             Win.Percent = Percent.Positive, 
-             Loss.Percent = Percent.Negative, 
+             Win.Percent = Percent.Positive,
+             Loss.Percent = Percent.Negative,
              WL.Ratio = Percent.Positive/Percent.Negative,
   		   Profit.Factor=Profit.Factor,
   		   Largest.Winner = Largest.Winner,
   		   Largest.Winner.Date = trades[grep(Largest.Winner, trades$Net.Trading.PL, ignore.case=T),]$End,
   		   Largest.Loser = Largest.Loser,
   		   Largest.Loser.Date = trades[grep(Largest.Loser, trades$Net.Trading.PL, ignore.case=T),]$End,
-  		   Max.Drawdown = Max.Drawdown) %>% 
-      select(Trades,WinTrades, Net.Trading.PL, Net.Trading.Ratio, Gross.Profit, Gross.Losses, Win.Percent, Loss.Percent, WL.Ratio,Profit.Factor,Largest.Winner,Largest.Winner.Date, Largest.Loser, Largest.Loser.Date,Max.Drawdown)
-    
+  		   Max.Drawdown = Max.Drawdown) %>%
+      dplyr::select(Trades,WinTrades, Net.Trading.PL, Net.Trading.Ratio, Gross.Profit, Gross.Losses, Win.Percent, Loss.Percent, WL.Ratio,Profit.Factor,Largest.Winner,Largest.Winner.Date, Largest.Loser, Largest.Loser.Date,Max.Drawdown)
+
     symbolDataAll <- get(symbol)
     clstart <- dplyr::first(Cl(symbolDataAll))
     clend <- dplyr::last(Cl(symbolDataAll))
     tab.trades$Stock.Annualized.return  <- round((clend - clstart) / clstart * 100, 0)
-    
+
     rets <- PortfReturns(multi.trend)
     tab.perf <- table.Arbitrary(rets,
                               metrics=c(
