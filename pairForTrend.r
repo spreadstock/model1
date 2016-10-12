@@ -538,10 +538,10 @@ reblanceImp <- function (strategy, portfolios, mktdata = NULL, parameters = NULL
     }
     
     pindex <- as.POSIXct(index(mktdata))
-    for (i in 2:length(pindex)) {
+    for (i in 1:length(pindex)) {
       for (symbol in symbols) {
         mktdata <- get(symbol, pos = st)
-        md_subset <- mktdata[pindex[i -1], ]
+        md_subset <- mktdata[pindex[i], ]
         sret$rules$pathdep <- rbind(sret$rules$pathdep, 
                                     applyRules(portfolio = portfolio, symbol = symbol, 
                                                strategy = s, mktdata = md_subset, Dates = NULL, 
