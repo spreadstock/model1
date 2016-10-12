@@ -2,8 +2,9 @@ library(quantstrat)
 
 startDate <- '2011-01-01'
 endDate <- '2016-09-02'
-#stock.folder <- 'C:/Users/exubixu/Desktop/Imp/git_new/model1/StockDatas/2016-08-09-Former_Rehabilitation_leaned/'
-stock.folder <- 'C:/Users/exubixu/Desktop/new1/'
+stock.folder <- 'C:/Users/exubixu/Desktop/Imp/git_new/model1/StockDatas/2016-08-09-Former_Rehabilitation_leaned/'
+symbols = c("SH600097")
+#stock.folder <- 'C:/Users/exubixu/Desktop/new1/'
 source.folder <- 'C:/Users/exubixu/Desktop/Imp/git_new/model1/'
 result.folder <- 'C:/Users/exubixu/Desktop/result/'
 
@@ -22,8 +23,8 @@ qs.strategy <- "trend1"
 source(paste0(source.folder,"trend_strategy_funciton1.r"))
 source(paste0(source.folder,"commonPackages.r"))
 
-#symbols = c("SH600681")
-symbols <- listStocksFromDir(stock.folder)
+
+#symbols <- listStocksFromDir(stock.folder)
 
 for(symbol in symbols) 
 { 
@@ -434,9 +435,9 @@ require(doParallel)
 registerDoParallel(cores=4)
 
 
-sink(paste0(result.folder,'aa.txt'))
+#sink(paste0(result.folder,'aa.txt'))
 applyStrategy(strategy=qs.strategy, portfolios=multi.trend)
-sink()
+#sink()
 
 updatePortf(multi.trend)
 updateAcct(multi.trend)
@@ -459,7 +460,7 @@ sink(paste0(result.folder,'order.txt'))
 getOrderBook(multi.trend)
 sink()
 
-#getStaticInfo(multi.trend,symbols,result.folder,tradeSize)
+getStaticInfo(multi.trend,multi.trend,symbols,result.folder,tradeSize)
 
 
 #查看transaction 历史
@@ -471,7 +472,7 @@ sink()
 #perTradeStats(multi.trend)
 #sink()
 
-write.csv(x=mktdata, file=paste0(result.folder,'SH600684','mktdata.csv'), row.names = TRUE)
+#write.csv(x=mktdata, file=paste0(result.folder,'SH600684','mktdata.csv'), row.names = TRUE)
 
 #sink(paste0(result.folder,'account.txt'))
 #getAccount(multi.trend)

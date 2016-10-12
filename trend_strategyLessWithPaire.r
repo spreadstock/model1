@@ -2,10 +2,13 @@ library(quantstrat)
 
 startDate <- '2011-01-01'
 endDate <- '2016-09-02'
-#stock.folder <- 'C:/Users/exubixu/Desktop/Imp/git_new/model1/StockDatas/2016-08-09-Former_Rehabilitation_leaned/'
-stock.folder <- 'C:/Users/exubixu/Desktop/new1/'
+stock.folder <- 'C:/Users/exubixu/Desktop/Imp/git_new/model1/StockDatas/2016-08-09-Former_Rehabilitation_leaned/'
 source.folder <- 'C:/Users/exubixu/Desktop/Imp/git_new/model1/'
 result.folder <- 'C:/Users/exubixu/Desktop/result/'
+clustering.folder <- "C:/Users/exubixu/Desktop/Imp/git_new/model1/testResult/testRel/"
+clustering.name <- "clusteringResult_bk"
+data.folder <- 'C:/Users/exubixu/Desktop/Imp/git_new/model1/StockDatas/2016-08-09-Later_Rehabilitation_Cleaned/'
+
 
 shortSMA <- 5
 middleSMA <- 13
@@ -13,6 +16,18 @@ initEq <- 50000 * length(symbols)
 tradeSize <- 45000
 pct <- 0.5
 minTradeSize <- tradeSize * pct
+MaxPos <- 35000  #max position in stockA; 
+# max position in stock B will be max * ratio, i.e. no hard position limit in 
+# Stock B
+lvls <- 3 #how many times to fade; Each order's qty will = MaxPos/lvls
+
+#clean up
+if (!exists('.blotter')) .blotter <- new.env()
+if (!exists('.strategy')) .strategy <- new.env() 
+suppressWarnings(rm(list = ls(envir = .blotter), envir = .blotter))
+suppressWarnings(rm(list = ls(envir = .strategy), envir = .strategy))
+rm.strat(qs.strategy)
+rm.strat(multi.trend)
 
 initDate <- '2001-08-08'
 currency('USD')
@@ -21,10 +36,19 @@ multi.trend <- "multi.trend"
 qs.strategy <- "trend1"
 source(paste0(source.folder,"trend_strategy_funciton1.r"))
 source(paste0(source.folder,"commonPackages.r"))
+source(paste0(source.folder,"pair_spreadImp.r"))
 source(paste0(source.folder,"pairForTrend.r"))
+source(paste0(source.folder,"trend_selectStock.r"))
 
-#symbols = c("SH600684")
-symbols <- listStocksFromDir(stock.folder)
+#symbList <- getTrendMatchStocks(data.folder)
+symbList <- c("SH600097","SH600183","SH600303","SH600697","SH601007","SZ000029","SZ000040","SZ000043","SZ000505","SZ000538","SZ002409")
+#symbList <- c("SH600097")
+pairList <- matchPairs(clustering.folder,clustering.name,symbList)
+newSymbList <- unique(c(symbList,as.vector(na.omit(pairList[-1,]))))
+#need remove NO
+symbols <- newSymbList[newSymbList!="NO"]
+
+
 
 for(symbol in symbols) 
 { 
@@ -39,8 +63,13 @@ for(symbol in symbols)
   rm(a)
 }
 
-rm.strat(qs.strategy)
-rm.strat(multi.trend)
+#prepare stock data besides market data
+stockData <- Cl(get(symbols[1]))
+for (aStockName in symbols[-1]) {
+  stockData <- cbind(stockData, Cl(get(aStockName)))
+}
+
+
 initPortf(multi.trend, symbols, initDate = initDate)
 initAcct(
   multi.trend,
@@ -51,6 +80,8 @@ initAcct(
 initOrders(portfolio = multi.trend, initDate = initDate)
 
 strategy(qs.strategy, store =TRUE)
+
+setupPairsGlobals(multi.trend, na.omit(pairList),lvls)
 
 #cc.最近三天的收盘价都在10天均线之上
 add.indicator(
@@ -163,7 +194,6 @@ osFixedMoneyEntry <- function(timestamp, orderqty, portfolio, symbol, ruletype, 
      tradeSizeNow <- total.equity
   }
   print(paste0("osFixedMoneyEntry ttradeSizeNow:",tradeSizeNow))
-  #atr <- as.numeric(mktdata[timestamp,]$atr)
   atr <- as.numeric(get(symbol)[timestamp,]$atr)
   orderqty <- round(tradeSizeNow/atr,-2)  
   price <- as.numeric(Op(get(symbol)[timestamp, ]))
@@ -217,11 +247,7 @@ osPercentEquity <- function(timestamp, orderqty, portfolio,symbol, ruletype,trad
 	   print(paste0("osPercentEquity:",orderqty))
 	   return (orderqty)
 	}
-	#price <- as.numeric(Op(mktdata[timestamp, ]))
 	price <- as.numeric(Op(get(symbol)[timestamp, ]))
-	#Portfolio <- get(paste("portfolio", multi.trend, sep = "."), envir = .blotter)
-    #tnxlast <- last(Portfolio$symbols[[symbol]]$txn[paste('::',timestamp,sep='')])
-	#print(paste0("tnxlast:",tnxlast$Txn.Price))
 	
     trading.pl <- sum(getTxns(Portfolio = portfolio, Symbol = symbol)$Txn.Value)
     trading.fee <- 0 - sum(getTxns(Portfolio = portfolio, Symbol = symbol)$Txn.Fees)
@@ -320,7 +346,6 @@ add.signal(
 ) 
 
 #########################################
-# last(getPrice(mktdata)[paste('::',as.character(curIndex),sep='')][,1]) * 0.05
 # normal enter
 trade.percent=-0.004
 
@@ -335,8 +360,6 @@ getTnxFee <- function(TxnQty, TxnPrice, Symbol)
   }
   else
   {
-    #fee <- round(5000 * TxnPrice * trade.percent, 2)
-    #fee <- TxnQty * TxnPrice * trade.percent
     transFeeShanghai <- round(qty/1000,0)
     if(transFeeShanghai < 1)
     {
@@ -347,8 +370,7 @@ getTnxFee <- function(TxnQty, TxnPrice, Symbol)
   #print(paste0("getTnxFee fee:",fee))
   return(fee)
 }
-
-#applyRules(portfolio=multi.trend, symbol='SH600000',strategy=qs.strategy, mktdata=mktdata)  
+ 
 add.rule(
   qs.strategy,
   name = 'ruleSignal',
@@ -448,6 +470,50 @@ add.rule(
 enable.rule(qs.strategy, type="chain", label="StopTrailingLONG")
 enable.rule(qs.strategy, type="chain", label="StopTrailingATR")	
 
+#########################################
+
+setupPairsSignals(qs.strategy, stockData)
+
+add.rule(
+      qs.strategy, 
+      name = 'ruleSignal',
+	  arguments=list(
+		sigcol='Stock.upperAdj', 
+		sigval=TRUE,
+		ordertype='stoptrailing', 
+		orderside='long',		
+		replace=FALSE,
+		tmult=TRUE, 
+		threshold=quote(.stoptrailing),
+		orderqty='all',
+		orderset='ocolong'
+	),
+	type='chain', parent='pairEnterUpper',
+	label='StopTrailingPairEnterUpper',
+	enabled=FALSE
+)
+
+add.rule(
+      qs.strategy, 
+      name = 'ruleSignal',
+	  arguments=list(
+		sigcol='Stock.lowerAdj', 
+		sigval=TRUE,
+		replace=FALSE,
+		orderside='long',
+		ordertype='stoptrailing', 
+		tmult=TRUE, 
+		threshold=quote(.stoptrailing),
+		orderqty='all',
+		orderset='ocolong'
+	),
+	type='chain', parent='pairEnterLower',
+	label='StopTrailingPairEnterLower',
+	enabled=FALSE
+)  
+
+enable.rule(qs.strategy, type="chain", label="StopTrailingPairEnterLower")
+enable.rule(qs.strategy, type="chain", label="StopTrailingPairEnterUpper")	
 
 #########################################
 require(doParallel)
@@ -456,17 +522,12 @@ registerDoParallel(cores=4)
 
 sink(paste0(result.folder,'aa.txt'))
 reblanceImp(strategy=qs.strategy, portfolios=multi.trend)
-#applyStrategy(strategy=qs.strategy, portfolios=multi.trend)
 sink()
 
 updatePortf(multi.trend)
 updateAcct(multi.trend)
 updateEndEq(multi.trend)	
 
-
-#sink(paste0(result.folder,'SZ000040','tnx.txt')
-#getTxns(Portfolio=multi.trend, Symbol='SZ000040')
-#sink()
 
 for(symbol in symbols) 
 { 
@@ -481,22 +542,6 @@ getOrderBook(multi.trend)
 sink()
 
 getStaticInfo(multi.trend,multi.trend,symbols,result.folder,tradeSize)
-
-
-#查看transaction 历史
-#sink(paste0(result.folder,'statistic.txt'))
-#t(tradeStats(multi.trend))
-#sink()
-
-#sink(paste0(result.folder,'trade.txt'))
-#perTradeStats(multi.trend)
-#sink()
-
-write.csv(x=mktdata, file=paste0(result.folder,'SH600684','mktdata.csv'), row.names = TRUE)
-
-#sink(paste0(result.folder,'account.txt'))
-#getAccount(multi.trend)
-#sink()
 
 
 
