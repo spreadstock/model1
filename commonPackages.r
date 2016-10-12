@@ -275,7 +275,7 @@ getStaticInfo <- function(portfolio,symbols,result.folder)
     symbolStatic <- tstats[symbol,]
   
     tab.trades <- symbolStatic %>% 
-      mutate(Trades = Num.Trades, 
+      dplyr::mutate(Trades = Num.Trades, 
   	       WinTrades = round(Num.Trades * Percent.Positive/100,0),
   	       Net.Trading.PL=Net.Trading.PL,
   		   Net.Trading.Ratio=round(Net.Trading.PL/initEq * 100,0),
@@ -293,8 +293,8 @@ getStaticInfo <- function(portfolio,symbols,result.folder)
       select(Trades,WinTrades, Net.Trading.PL, Net.Trading.Ratio, Gross.Profit, Gross.Losses, Win.Percent, Loss.Percent, WL.Ratio,Profit.Factor,Largest.Winner,Largest.Winner.Date, Largest.Loser, Largest.Loser.Date,Max.Drawdown)
     
     symbolDataAll <- get(symbol)
-    clstart <- first(Cl(symbolDataAll))
-    clend <- last(Cl(symbolDataAll))
+    clstart <- dplyr::first(Cl(symbolDataAll))
+    clend <- dplyr::last(Cl(symbolDataAll))
     tab.trades$Stock.Annualized.return  <- round((clend - clstart) / clstart * 100, 0)
     
     rets <- PortfReturns(multi.trend)

@@ -47,7 +47,7 @@ matchPairs <- function(folderName, fileName, x)
       tmp <- finalResult_1st[(finalResult_1st$Stock1 == aStock
                               | finalResult_1st$Stock2 == aStock),]
       if (nrow(tmp) > 0) {
-        aPair <- first(tmp[tmp$Cointegration == min(tmp$Cointegration),c(1,2)])
+        aPair <- xts::first(tmp[tmp$Cointegration == min(tmp$Cointegration),c(1,2)])
         if (aPair[1,1] %in% pairResult[,1] | aPair[1,1] %in% pairResult[,2]
             | aPair[1,2] %in% pairResult[,1] | aPair[1,2] %in% pairResult[,2]) {
         } else {
