@@ -316,6 +316,7 @@ setupPairsSignals <- function(portfolio,stockData)
       sigval = TRUE,
       ordertype = 'market',
       orderside = 'long',
+	  orderset='ocolong',
       replace = FALSE,
       prefer = 'Open',
       TxnFees="takeTranxFee",
@@ -324,7 +325,8 @@ setupPairsSignals <- function(portfolio,stockData)
       portfolioName = portfolio,
       marketTime = quote(index(stockData))
     ),
-    type = 'enter'
+    type = 'enter',
+	label='pairEnterUpper'
   )
   
   add.rule(
@@ -335,6 +337,7 @@ setupPairsSignals <- function(portfolio,stockData)
       sigval = TRUE,
       ordertype = 'market',
       orderside = 'long',
+	  orderset='ocolong',
       replace = FALSE,
       prefer = 'Open',
       TxnFees="takeTranxFee",
@@ -343,7 +346,8 @@ setupPairsSignals <- function(portfolio,stockData)
       portfolioName = portfolio,
       marketTime = quote(index(stockData))
     ),
-    type = 'enter'
+    type = 'enter',
+	label='pairEnterLower'
   )
 }
 

@@ -205,7 +205,7 @@ growCertainATRIndex <- function(x, index, nextTnx, closeTnxPrice, atrTnxPrice, A
 	}
 	aaa <- strsplit(colnames(x)[1],"[.]")
 	symbol <- aaa[[1]][1]
-
+    print(paste0("growCertainATRIndex: ",symbol))
 
 	
 	for (i in (index+1):nrow(x))
@@ -222,6 +222,10 @@ growCertainATRIndex <- function(x, index, nextTnx, closeTnxPrice, atrTnxPrice, A
 }
 findNextTnxIndex <- function(x, startIndex) 
 {
+  if(startIndex == nrow(x))
+  {
+     return (nrow(x))
+  }
   for (index in (startIndex+1):nrow(x))
   {
      if(isTnxIndex(x,index)) 
@@ -229,11 +233,12 @@ findNextTnxIndex <- function(x, startIndex)
           return (index)
      }	 
   }    
-  return (0)
+  return (nrow(x))
 }
 
 isTnxIndex <- function(x, index) 
 {
+print(paste0("isTnxIndex: ",nrow(x),"  ",index))
   corss <- TRUE
   result <- FALSE
   if((index-1) == 0)
@@ -262,14 +267,15 @@ isTnxIndex <- function(x, index)
 }
 findGrowATRSig <- function(x, index, ATRRate=0.5) 
 {
+   print(paste0("growCertainATRIndex: ",nrow(x),"  ",index))
 #如果符合趋势，这index+1是交易点
-     #if(x[index]$X1.isvolumeUp == 1 & (x[index]$X1.treat_trendGrowPlus == 1 | x[index]$X1.trendGrowMinus ==1))  
+     #if(x[index]$X1.isvolumeUp == 1 & (x[index]$X1.treat_trendGrowPlus == 1 | x[index]$X1.trendGrowMinus ==1)) 
+	 if(index == nrow(x))
+	 {
+		 return (0)
+     }
 	 if(isTnxIndex(x,index)) 
 	 {
-	     if(index == nrow(x))
-		 {
-		    return (0)
-		 }
 	     tnxIndex <- index+1
 		 nextTnxIndex <- findNextTnxIndex(x, tnxIndex) + 1
 	print(paste0("growCertainATRIndex  TnxIndex: ",tnxIndex))
@@ -290,6 +296,7 @@ addGrowATRSig <- function(x)
   a <- matrix(FALSE,nrow=nrow(x),ncol=1)
   for (i in 2:nrow(x))
   {
+    print(paste0("addGrowATRSig: ",nrow(x),"  ",i))
     index <- findGrowATRSig(x,i)
 	if(index != 0)
     {
