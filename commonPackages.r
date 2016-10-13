@@ -278,6 +278,23 @@ getStaticInfo <- function(portfolio,account,symbols,result.folder,tradeSize=4500
 
     a <- round(as.numeric(symbolStatic$Largest.Winner),1)
     b <- round(as.numeric(symbolStatic$Largest.Loser),1)
+    if(length(trades[grep(a, trades$Net.Trading.PL, ignore.case=T),]$End) == 0)
+    {
+      dataWin <- 'NA'
+    }
+    else
+    {
+      dataWin <- trades[grep(a, trades$Net.Trading.PL, ignore.case=T),]$End
+    }
+    if(length(trades[grep(b, trades$Net.Trading.PL, ignore.case=T),]$End) == 0)
+    {
+      dataLose <- 'NA'
+    }
+    else
+    {
+      dataLose <- trades[grep(b, trades$Net.Trading.PL, ignore.case=T),]$End
+    } 
+    
     tab.trades <- symbolStatic %>%
       dplyr::mutate(Trades = Num.Trades,
   	       WinTrades = round(Num.Trades * Percent.Positive/100,0),
@@ -290,9 +307,9 @@ getStaticInfo <- function(portfolio,account,symbols,result.folder,tradeSize=4500
              WL.Ratio = Percent.Positive/Percent.Negative,
   		   Profit.Factor=Profit.Factor,
   		   Largest.Winner = Largest.Winner,
-  		   Largest.Winner.Date = trades[grep(a, trades$Net.Trading.PL, ignore.case=T),]$End,
+  		   Largest.Winner.Date = dataWin,
   		   Largest.Loser = Largest.Loser,
-  		   Largest.Loser.Date = trades[grep(b, trades$Net.Trading.PL, ignore.case=T),]$End,
+  		   Largest.Loser.Date = dataLose,
   		   Max.Drawdown = Max.Drawdown) %>%
       dplyr::select(Trades,WinTrades, Net.Trading.PL, Net.Trading.Ratio, Gross.Profit, Gross.Losses, Win.Percent, Loss.Percent, WL.Ratio,Profit.Factor,Largest.Winner,Largest.Winner.Date, Largest.Loser, Largest.Loser.Date,Max.Drawdown)
 

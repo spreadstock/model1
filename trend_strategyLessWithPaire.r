@@ -41,8 +41,8 @@ source(paste0(source.folder,"pairForTrend.r"))
 source(paste0(source.folder,"trend_selectStock.r"))
 
 #symbList <- getTrendMatchStocks(data.folder)
-symbList <- c("SH600097","SH600183","SH600303","SH600697","SH601007","SZ000029","SZ000040","SZ000043","SZ000505","SZ000538","SZ002409")
-#symbList <- c("SH600097")
+#symbList <- c("SH600097","SH600183","SH600303","SH600697","SH601007","SZ000029","SZ000040","SZ000043","SZ000505","SZ000538","SZ002409")
+symbList <- c("SH600353","SH600684")
 pairList <- matchPairs(clustering.folder,clustering.name,symbList)
 newSymbList <- unique(c(symbList,as.vector(na.omit(pairList[-1,]))))
 #need remove NO
@@ -474,46 +474,46 @@ enable.rule(qs.strategy, type="chain", label="StopTrailingATR")
 
 setupPairsSignals(qs.strategy, stockData)
 
-add.rule(
-      qs.strategy, 
-      name = 'ruleSignal',
-	  arguments=list(
-		sigcol='Stock.upperAdj', 
-		sigval=TRUE,
-		ordertype='stoptrailing', 
-		orderside='long',		
-		replace=FALSE,
-		tmult=TRUE, 
-		threshold=quote(.stoptrailing),
-		orderqty='all',
-		orderset='ocolong'
-	),
-	type='chain', parent='pairEnterUpper',
-	label='StopTrailingPairEnterUpper',
-	enabled=FALSE
-)
-
-add.rule(
-      qs.strategy, 
-      name = 'ruleSignal',
-	  arguments=list(
-		sigcol='Stock.lowerAdj', 
-		sigval=TRUE,
-		replace=FALSE,
-		orderside='long',
-		ordertype='stoptrailing', 
-		tmult=TRUE, 
-		threshold=quote(.stoptrailing),
-		orderqty='all',
-		orderset='ocolong'
-	),
-	type='chain', parent='pairEnterLower',
-	label='StopTrailingPairEnterLower',
-	enabled=FALSE
-)  
-
-enable.rule(qs.strategy, type="chain", label="StopTrailingPairEnterLower")
-enable.rule(qs.strategy, type="chain", label="StopTrailingPairEnterUpper")	
+#add.rule(
+#      qs.strategy, 
+#      name = 'ruleSignal',
+#	  arguments=list(
+#		sigcol='Stock.upperAdj', 
+#		sigval=TRUE,
+#		ordertype='stoptrailing', 
+#		orderside='long',		
+#		replace=FALSE,
+#		tmult=TRUE, 
+#		threshold=quote(.stoptrailing),
+#		orderqty='all',
+#		orderset='ocolong'
+#	),
+#	type='chain', parent='pairEnterUpper',
+#	label='StopTrailingPairEnterUpper',
+#	enabled=FALSE
+#)
+#
+#add.rule(
+#      qs.strategy, 
+#      name = 'ruleSignal',
+#	  arguments=list(
+#		sigcol='Stock.lowerAdj', 
+#		sigval=TRUE,
+#		replace=FALSE,
+#		orderside='long',
+#		ordertype='stoptrailing', 
+#		tmult=TRUE, 
+#		threshold=quote(.stoptrailing),
+#		orderqty='all',
+#		orderset='ocolong'
+#	),
+#	type='chain', parent='pairEnterLower',
+#	label='StopTrailingPairEnterLower',
+#	enabled=FALSE
+#)  
+#
+#enable.rule(qs.strategy, type="chain", label="StopTrailingPairEnterLower")
+#enable.rule(qs.strategy, type="chain", label="StopTrailingPairEnterUpper")	
 
 #########################################
 require(doParallel)
