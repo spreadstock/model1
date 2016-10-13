@@ -217,12 +217,13 @@ getPairLvls <- function(portfolio, x)
 
 
 
-calculate_betaforTrend <- function(x, currentStockName) {
+calculate_betaforTrend <- function(x, currentStockName,portfolio) {
   aStock <- word(currentStockName,sep=fixed("."))
-  pairedStock <- getPaired(multi.trend, aStock)
+  pairedStock <- getPaired(portfolio, aStock)
   if (is.null(pairedStock)) {
     returnBeta <- rep(0,nrow(x))
-    returnBeta <- cbind(returnBeta, 0,1,-1)
+    #V2
+    returnBeta <- cbind(returnBeta,0, 0,1,-1)
   } else {
     stockData <- x[,paste(pairedStock["Stock1"], 'Close', sep=".")]
     stockData <- cbind(stockData,x[,paste(pairedStock["Stock2"], 'Close', sep=".")])
@@ -259,7 +260,8 @@ setupPairsSignals <- function(portfolio,stockData)
     name = "calculate_betaforTrend",
     arguments = list(
       x = quote(Cl(stockData)),
-      currentStockName = quote(colnames(Cl(mktdata)))
+      currentStockName = quote(colnames(Cl(mktdata))),
+      portfolio= quote(portfolio)
     ),
     label = "SPREAD"
   )
@@ -380,7 +382,7 @@ osSpreadForTrend <- function (data, timestamp, ordertype, orderside,
 
 
   
-  beta <-  mktdata[,"Beta0.SPREAD"]
+  beta <-  data[,"Beta0.SPREAD"]
   ratio <- as.numeric(coredata(beta[timestamp]))
   #print(ratio)
   
@@ -438,10 +440,10 @@ osSpreadMaxDollar <- function(data, timestamp, orderqty, ordertype, orderside,
   portf <- getPortfolio(portfolio)
   thePair <- as.vector(getPaired(portfolioName,symbol))
   if (is.null(thePair))
-    return (0)
+    return (100)
   
   pairLocation <- which(thePair==symbol)
-  beta <-  mktdata[,"Beta.SPREAD"]
+  beta <-  data[,"Beta.SPREAD"]
   ratio <- as.numeric(coredata(beta[timestamp]))
   if (ratio == 0 ) {
     #to do
