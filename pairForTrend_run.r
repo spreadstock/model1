@@ -43,7 +43,7 @@ symbList <- c("SH600097","SH600183","SH600303","SH600697","SH601007","SZ000029",
 #"SH600298" "SH600037" "SH601908" "SZ002123" "SZ002027"
 pairList <- matchPairs(clustering.folder,clustering.name,symbList)
 
-newSymbList <- unique(c(symbList,as.vector(na.omit(pairList[-1,]))))
+newSymbList <- unique(t((na.omit(pairList[-1,]))))
 #need remove NO
 newSymbList <- newSymbList[newSymbList!="NO"]
 
