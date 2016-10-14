@@ -41,8 +41,8 @@ source(paste0(source.folder,"pairForTrend.r"))
 source(paste0(source.folder,"trend_selectStock.r"))
 
 #symbList <- getTrendMatchStocks(data.folder)
-#symbList <- c("SH600097","SH600183","SH600303","SH600697","SH601007","SZ000029","SZ000040","SZ000043","SZ000505","SZ000538","SZ002409")
-symbList <- c("SH600353","SH600684")
+symbList <- c("SH600097","SH600183","SH600303","SH600697","SH601007","SZ000029","SZ000040","SZ000043","SZ000505","SZ000538","SZ002409")
+#symbList <- c("SH600353","SH600684")
 pairList <- matchPairs(clustering.folder,clustering.name,symbList)
 newSymbList <- unique(c(symbList,as.vector(na.omit(pairList[-1,]))))
 #need remove NO
@@ -216,7 +216,7 @@ osFixedMoneyEntry <- function(timestamp, orderqty, portfolio, symbol, ruletype, 
   print(paste0("osFixedMoneyEntry trading.pl:",trading.pl))
   print(paste0("osFixedMoneyEntry orderqty:",orderqty))
 
-	
+  #setPairQty(portfolio,symbol,timestamp,orderqty) 
   return (orderqty)
 }
   
@@ -276,6 +276,7 @@ osPercentEquity <- function(timestamp, orderqty, portfolio,symbol, ruletype,trad
 	print(paste0("here price:",price))
 	print(paste0("here timestamp:",timestamp))
 	print(paste0("here orderqty:",orderqty))
+	#setPairQty(portfolio,symbol,timestamp,orderqty) 
     return(orderqty)
 }
 
@@ -472,7 +473,100 @@ enable.rule(qs.strategy, type="chain", label="StopTrailingATR")
 
 #########################################
 
-setupPairsSignals(qs.strategy, stockData)
+add.indicator( 
+    qs.strategy, 
+    name = "calculate_betaforTrend",
+    arguments = list(
+      x = quote(Cl(stockData)),
+      currentStockName = quote(colnames(Cl(mktdata))),
+      portfolio= quote(multi.trend)
+    ),
+    label = "SPREAD"
+  )
+  
+  add.signal(
+    qs.strategy, 
+    name = "sigCrossover",
+    arguments = list(columns = c("BetaTotal.SPREAD", "Upper.SPREAD"), relationship = "gt"),
+    label = "Spread.cross.upper"
+  )
+  
+  
+  add.signal(
+    qs.strategy, 
+    name = "sigCrossover",
+    arguments = list(columns = c("BetaTotal.SPREAD", "Lower.SPREAD"), relationship = "lt"),
+    label = "Spread.cross.lower"
+  )
+  
+  add.signal(
+    qs.strategy, 
+    name = "sigFormula",
+    arguments = list(
+      columns = c(
+        "Spread.cross.upper"
+      ),
+      formula = "(Spread.cross.upper == 1)",
+      cross = FALSE
+    ),
+    label = "Stock.upperAdj"
+  )
+  
+  add.signal(
+    qs.strategy, 
+    name = "sigFormula",
+    arguments = list(
+      columns = c(
+        "Spread.cross.lower"
+      ),
+      formula = "(Spread.cross.lower == 1)",
+      cross = FALSE
+    ),
+    label = "Stock.lowerAdj"
+  )
+  
+  
+  add.rule(
+    qs.strategy, 
+    name = 'ruleSignal',
+    arguments = list(
+      sigcol = "Stock.upperAdj",
+      sigval = TRUE,
+      ordertype = 'market',
+      orderside = 'long',
+	  orderset='ocolong',
+      replace = FALSE,
+      prefer = 'Open',
+      TxnFees="takeTranxFee",
+      osFUN = 'osSpreadForTrend',
+      ordersidetype = 'upperAdj',
+      portfolioName = multi.trend,
+      marketTime = quote(index(stockData))
+    ),
+    type = 'enter',
+	label='pairEnterUpper'
+  )
+  
+  add.rule(
+    qs.strategy, 
+    name = 'ruleSignal',
+    arguments = list(
+      sigcol = "Stock.lowerAdj",
+      sigval = TRUE,
+      ordertype = 'market',
+      orderside = 'long',
+	  orderset='ocolong',
+      replace = FALSE,
+      prefer = 'Open',
+      TxnFees="takeTranxFee",
+      osFUN = 'osSpreadForTrend',
+      ordersidetype = 'lowerAdj',
+      portfolioName = multi.trend,
+      marketTime = quote(index(stockData))
+    ),
+    type = 'enter',
+	label='pairEnterLower'
+  )
 
 #add.rule(
 #      qs.strategy, 
