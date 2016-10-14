@@ -448,17 +448,19 @@ updateEndEq(multi.trend)
 #getTxns(Portfolio=multi.trend, Symbol='SZ000040')
 #sink()
 
+orderbookall <- getOrderBook(multi.trend)
+
 for(symbol in symbols) 
 { 
   sink(paste0(result.folder,symbol,'tnx.txt'))
   tnx <- getTxns(Portfolio=multi.trend, symbol)
   print(tnx)
   sink()
+  
+  sink(paste0(result.folder,symbol,'order.txt'))
+  orderbookall$multi.trend$symbol
+  sink()
 }
-
-sink(paste0(result.folder,'order.txt'))
-getOrderBook(multi.trend)
-sink()
 
 getStaticInfo(multi.trend,multi.trend,symbols,result.folder,tradeSize)
 
