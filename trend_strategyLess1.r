@@ -458,9 +458,12 @@ for(symbol in symbols)
   sink()
   
   sink(paste0(result.folder,symbol,'order.txt'))
-  orderbookall$multi.trend$symbol
+  out <- orderbookall$multi.trend[symbol]
+  print(out)
   sink()
 }
+
+
 
 getStaticInfo(multi.trend,multi.trend,symbols,result.folder,tradeSize)
 
