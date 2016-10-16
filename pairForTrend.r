@@ -77,6 +77,16 @@ matchPairs <- function(folderName, fileName, x)
   
 }
 
+consolidateSymbolList <- function(pairList)
+{
+  newSymbList <- unique(t((na.omit(pairList[-1,]))))
+  #need remove NO
+  newSymbList <- newSymbList[newSymbList!="NO"]
+  
+  return(newSymbList)
+  
+}
+
 
 getPaired <- function(portfolio, x)
 {
