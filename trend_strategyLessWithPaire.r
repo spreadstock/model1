@@ -44,10 +44,7 @@ source(paste0(source.folder,"trend_selectStock.r"))
 symbList <- c("SH600097","SH600183","SH600303","SH600697","SH601007","SZ000029","SZ000040","SZ000043","SZ000505","SZ000538","SZ002409")
 #symbList <- c("SH600353","SH600684")
 pairList <- matchPairs(clustering.folder,clustering.name,symbList)
-newSymbList <- unique(c(symbList,as.vector(na.omit(pairList[-1,]))))
-#need remove NO
-symbols <- newSymbList[newSymbList!="NO"]
-
+symbols <- consolidateSymbolList(pairList)
 
 
 for(symbol in symbols) 
